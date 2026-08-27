@@ -1,0 +1,40 @@
+package com.aynreader.backend.favicon;
+
+import com.aynreader.backend.HttpGetter;
+import com.aynreader.backend.HttpGetter.HttpResult;
+import com.aynreader.backend.model.Feed;
+import jakarta.annotation.Priority;
+import jakarta.inject.Singleton;
+import java.net.URI;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+/** Fetches favicon from root of the domain (e.g. https://example.com/favicon.ico) */
+@Slf4j
+@RequiredArgsConstructor
+@Singleton
+@Priority(0)
+public class RootFaviconFetcher implements FaviconFetcher {
+
+    private final HttpGetter getter;
+
+    @Override
+    public Favicon fetch(Feed feed) {
+        String url = feed.getLink();
+        if (url == null) {
+            url = feed.getUrl();
+        }
+
+        try {
+            URI uri = URI.create(url.trim());
+            String faviconUrl = "%s://%s/favicon.ico".formatted(uri.getScheme(), uri.getHost());
+
+            log.debug("getting root icon at {}", faviconUrl);
+            HttpResult result = getter.get(faviconUrl);
+            return new Favicon(result.content(), result.contentType());
+        } catch (Exception e) {
+            log.debug("Failed to retrieve iconAtRoot for url {}: ", url, e);
+            return null;
+        }
+    }
+}

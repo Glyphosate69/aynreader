@@ -1,0 +1,15 @@
+FROM ibm-semeru-runtimes:open-jdk-25.0.3.0-jre@sha256:43ec947fee9c4c2ed880620ae9e78911ac5eef66391e5a2c43f956dcc9000491
+EXPOSE 8082
+
+RUN mkdir -p /aynreader/data
+VOLUME /aynreader/data
+
+COPY artifacts/extracted-jvm-package/quarkus-app/ /aynreader
+WORKDIR /aynreader
+
+CMD ["java", \
+    "-Xtune:virtualized", \
+    "-Xminf0.05", \
+    "-Xmaxf0.1", \
+    "-jar", \
+    "quarkus-run.jar"]

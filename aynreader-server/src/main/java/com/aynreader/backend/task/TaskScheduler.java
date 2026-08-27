@@ -1,0 +1,34 @@
+package com.aynreader.backend.task;
+
+import com.aynreader.AynReaderConfiguration;
+import com.google.common.util.concurrent.MoreExecutors;
+import io.quarkus.arc.All;
+import jakarta.inject.Singleton;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@Singleton
+public class TaskScheduler {
+
+    private final List<ScheduledTask> tasks;
+    private final AynReaderConfiguration config;
+
+    private ScheduledExecutorService executor;
+
+    public TaskScheduler(@All List<ScheduledTask> tasks, AynReaderConfiguration config) {
+        this.tasks = tasks;
+        this.config = config;
+    }
+
+    public void start() {
+        this.executor = Executors.newScheduledThreadPool(tasks.size());
+        this.tasks.forEach(task -> task.register(executor));
+    }
+
+    public void stop() {
+        MoreExecutors.shutdownAndAwaitTermination(executor, config.shutdownTimeout());
+    }
+}

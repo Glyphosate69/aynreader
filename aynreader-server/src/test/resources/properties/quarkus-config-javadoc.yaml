@@ -1,0 +1,186 @@
+---
+extension:
+  groupId: "com.aynreader"
+  artifactId: "aynreader-server"
+  name: "AynReader Server"
+  nameSource: "POM_XML"
+  detected: true
+elements:
+  com.aynreader.AynReaderConfiguration.HttpClient.maxResponseSize:
+    description: "If a feed is larger than this, it will be discarded to prevent memory\
+      \ issues while parsing the feed."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.passwordRecoveryEnabled:
+    description: "Enable password recovery via email.\n\nQuarkus mailer will need\
+      \ to be configured."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.imageProxyEnabled:
+    description: "If enabled, images in feed entries will be proxied through the server\
+      \ instead of accessed directly by the browser.\n\nThis is useful if aynreader\
+      \ is accessed through a restricting proxy that blocks some feeds that are followed."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.FeedRefresh.forceRefreshCooldownDuration:
+    description: "Duration after which the \"Fetch all my feeds now\" action is available\
+      \ again after use to avoid spamming feeds."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.Database.queryTimeout:
+    description: "Timeout applied to all database queries.\n\n0 to disable."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.Database.Cleanup.statusesMaxAge:
+    description: "Maximum age of feed entry statuses (read/unread) in the database.\
+      \ Older statuses will be deleted.\n\n0 to disable."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.FeedRefresh.filteringExpressionEvaluationTimeout:
+    description: "Duration after which the evaluation of a filtering expresion to\
+      \ mark an entry as read is considered to have timed out."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.Database.Cleanup.maxFeedCapacity:
+    description: "Maximum number of entries per feed to keep in the database.\n\n\
+      0 to disable."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.FeedRefresh.maxInterval:
+    description: "Maximum amount of time AynReader will wait before refreshing a feed.\
+      \ This is used as an upper bound when:\n\n<ul>\n<li>an error occurs while refreshing\
+      \ a feed and we're backing off exponentially</li>\n<li>we receive a Cache-Control\
+      \ header from the feed</li>\n<li>we receive a Retry-After header from the feed</li>\n\
+      </ul>"
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.Database.cleanup:
+    description: "Database cleanup settings"
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.FeedRefresh.databaseThreads:
+    description: "Amount of threads used to insert new entries in the database."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.HttpClient.connectTimeout:
+    description: "Time to wait for a connection to be established."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.Database.Cleanup.batchSize:
+    description: "Rows to delete per query while cleaning up old entries."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.HttpClient.responseTimeout:
+    description: "Time to wait for the full response to be received."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.Users.strictPasswordPolicy:
+    description: "Whether to enable strict password validation (1 uppercase char,\
+      \ 1 lowercase char, 1 digit, 1 special char)."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.Database.Cleanup.maxFeedsPerUser:
+    description: "Limit the number of feeds a user can subscribe to.\n\n0 to disable."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.database:
+    description: "Database settings"
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.HttpClientCache.maximumMemorySize:
+    description: "Maximum amount of memory the cache can use."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.HttpClient.sslHandshakeTimeout:
+    description: "Time to wait for SSL handshake to complete."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.users:
+    description: "Users settings"
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.FeedRefresh.intervalEmpirical:
+    description: "If enabled, AynReader will calculate the next refresh time based\
+      \ on the feed's average time between entries and the time since\nthe last entry\
+      \ was published. The interval will be sometimes between the default refresh\
+      \ interval\n(`aynreader.feed-refresh.interval`) and the maximum refresh interval\
+      \ (`aynreader.feed-refresh.max-interval`).\n\nSee {@link FeedRefreshIntervalCalculator}\
+      \ for details."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.feedRefresh:
+    description: "Feed refresh engine settings"
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.googleAuthKey:
+    description: "Google Auth key for fetching Youtube channel favicons."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.HttpClient.socketTimeout:
+    description: "Time to wait between two packets before timeout."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.FeedRefresh.httpThreads:
+    description: "Amount of http threads used to fetch feeds."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.HttpClient.connectionTimeToLive:
+    description: "Time to live for a connection in the pool."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.HttpClient.cache:
+    description: "HTTP client cache configuration"
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.websocket:
+    description: "Websocket settings"
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.googleAnalyticsTrackingCode:
+    description: "Google Analytics tracking code."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.Users.allowRegistrations:
+    description: "Whether to let users create accounts for themselves."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.Websocket.treeReloadInterval:
+    description: "If the websocket connection is disabled or the connection is lost,\
+      \ the client will reload the feed tree at this interval."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.httpClient:
+    description: "HTTP client configuration"
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.FeedRefresh.errors:
+    description: "Feed refresh engine error handling settings"
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration:
+    description: "AynReader configuration"
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.HttpClient.blockLocalAddresses:
+    description: "Prevent access to local addresses to mitigate server-side request\
+      \ forgery (SSRF) attacks, which could potentially expose internal\nresources.\n\
+      \nYou may want to disable this if you subscribe to feeds that are only available\
+      \ on your local network and you trust all users of\nyour AynReader instance."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.announcement:
+    description: "Message displayed in a notification at the bottom of the page."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.HttpClientCache.expiration:
+    description: "Duration after which an entry is removed from the cache."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.FeedRefreshErrorHandling.backoffInterval:
+    description: "Duration to wait before retrying after an error. Will be multiplied\
+      \ by the number of errors since the last successful fetch."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.Websocket.pingInterval:
+    description: "Interval at which the client will send a ping message on the websocket\
+      \ to keep the connection alive."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.FeedRefresh.interval:
+    description: "Default amount of time AynReader will wait before refreshing a feed."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.FeedRefreshErrorHandling.retriesBeforeBackoff:
+    description: "Number of retries before backoff is applied."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.Database.Cleanup.entriesMaxAge:
+    description: "Maximum age of feed entries in the database. Older entries will\
+      \ be deleted.\n\n0 to disable."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.HttpClientCache.enabled:
+    description: "Whether to enable the cache. This cache is used to avoid spamming\
+      \ feeds in short bursts (e.g. when subscribing to a feed for the\nfirst time\
+      \ or when clicking \"fetch all my feeds now\")."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.HttpClient.idleConnectionsEvictionInterval:
+    description: "Time between eviction runs for idle connections."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.FeedRefresh.userInactivityPeriod:
+    description: "Duration after which a user is considered inactive. Feeds for inactive\
+      \ users are not refreshed until they log in again.\n\n0 to disable."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.Users.createDemoAccount:
+    description: "Whether to create a demo account the first time the app starts."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.hideFromWebCrawlers:
+    description: "Whether to expose a robots.txt file that disallows web crawlers\
+      \ and search engine indexers."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.Websocket.enabled:
+    description: "Enable websocket connection so the server can notify web clients\
+      \ that there are new entries for feeds."
+    format: "JAVADOC"
+  com.aynreader.AynReaderConfiguration.HttpClient.userAgent:
+    description: "User-Agent string that will be used by the http client, leave empty\
+      \ for the default one."
+    format: "JAVADOC"

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+	<changeSet id="feed-icons" author="athou">
+		<addColumn tableName="FEEDS">
+			<column name="icon_url" type="CLOB">
+				<constraints nullable="true" />
+			</column>
+		</addColumn>
+	</changeSet>
+
+	<changeSet id="remove-pocket-sharing" author="athou">
+		<dropColumn tableName="USERSETTINGS" columnName="pocket" />
+	</changeSet>
+
+	<changeSet id="scraped-feed-configs" author="aynreader">
+		<preConditions onFail="MARK_RAN">
+			<not>
+				<tableExists tableName="SCRAPEDFEEDCONFIGS" />
+			</not>
+		</preConditions>
+		<createTable tableName="SCRAPEDFEEDCONFIGS">
+			<column name="id" type="BIGINT">
+				<constraints nullable="false" primaryKey="true" />
+			</column>
+			<column name="feed_id" type="BIGINT">
+				<constraints nullable="false" unique="true" />
+			</column>
+			<column name="page_url" type="CLOB">
+				<constraints nullable="false" />
+			</column>
+			<column name="item_selector" type="VARCHAR(2048)">
+				<constraints nullable="false" />
+			</column>
+		</createTable>
+		<addForeignKeyConstraint
+				baseTableName="SCRAPEDFEEDCONFIGS"
+				baseColumnNames="feed_id"
+				constraintName="fk_scrapedfeedconfigs_feed"
+				referencedTableName="FEEDS"
+				referencedColumnNames="id"
+				onDelete="CASCADE" />
+	</changeSet>
+
+	<changeSet id="scraped-feed-field-selectors" author="aynreader">
+		<preConditions onFail="MARK_RAN">
+			<not>
+				<columnExists tableName="SCRAPEDFEEDCONFIGS" columnName="title_selector" />
+			</not>
+		</preConditions>
+		<addColumn tableName="SCRAPEDFEEDCONFIGS">
+			<column name="title_selector" type="VARCHAR(2048)" />
+			<column name="description_selector" type="VARCHAR(2048)" />
+			<column name="url_selector" type="VARCHAR(2048)" />
+			<column name="image_selector" type="VARCHAR(2048)" />
+			<column name="date_selector" type="VARCHAR(2048)" />
+		</addColumn>
+	</changeSet>
+
+</databaseChangeLog>

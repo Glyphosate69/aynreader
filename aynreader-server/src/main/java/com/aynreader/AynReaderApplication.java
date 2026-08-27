@@ -1,0 +1,43 @@
+package com.aynreader;
+
+import com.aynreader.backend.feed.FeedRefreshEngine;
+import com.aynreader.backend.feed.ImageProxyUrl;
+import com.aynreader.backend.task.TaskScheduler;
+import com.aynreader.security.password.PasswordConstraintValidator;
+import io.quarkus.runtime.ShutdownEvent;
+import io.quarkus.runtime.StartupEvent;
+import jakarta.enterprise.event.Observes;
+import jakarta.inject.Singleton;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@Singleton
+@RequiredArgsConstructor
+public class AynReaderApplication {
+
+    private final FeedRefreshEngine feedRefreshEngine;
+    private final TaskScheduler taskScheduler;
+    private final AynReaderConfiguration config;
+
+    public void start(@Observes StartupEvent ev) {
+        log.info("starting up...");
+
+        PasswordConstraintValidator.setMinimumPasswordLength(
+                config.users().minimumPasswordLength());
+
+        if (config.imageProxyEnabled()) {
+            ImageProxyUrl.generateKey();
+        }
+
+        feedRefreshEngine.start();
+        taskScheduler.start();
+    }
+
+    public void stop(@Observes ShutdownEvent ev) {
+        log.info("shutting down...");
+
+        feedRefreshEngine.stop();
+        taskScheduler.stop();
+    }
+}
