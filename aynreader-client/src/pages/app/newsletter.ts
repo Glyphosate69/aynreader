@@ -1,18 +1,23 @@
-import type { Entry } from "@/app/types"
+import type { Category, Entry } from "@/app/types"
 
-type NewsletterTemplate = "brief" | "digest" | "editorial" | "radar"
+export type NewsletterTemplate = "brief" | "digest" | "editorial" | "radar"
+export type NewsletterPeriod = "today" | "week" | "month" | "custom"
 
-interface NewsletterSelection {
+export interface NewsletterScope {
+    categoryIds: string[]
     feedIds: string[]
-    excludedEntryIds: string[]
-    maximumArticles: number
+    period: NewsletterPeriod
+    customStartDate?: string
 }
+
+export type SelectedNewsletterEntries = Record<string, Entry>
 
 interface NewsletterDocument {
     entries: Entry[]
     template: NewsletterTemplate
     includeImages: boolean
     generatedAt: Date
+    title: string
 }
 
 const palettes: Record<NewsletterTemplate, { accent: string; canvas: string; surface: string; text: string }> = {
@@ -24,23 +29,69 @@ const palettes: Record<NewsletterTemplate, { accent: string; canvas: string; sur
 
 export const newsletterEntryId = (entry: Entry) => `${entry.feedId}:${entry.id}`
 
-export function selectNewsletterEntries(entries: Entry[], selection: NewsletterSelection) {
-    const selectedFeedIds = new Set(selection.feedIds)
-    const excludedEntryIds = new Set(selection.excludedEntryIds)
+export function getCategoryFeedIds(categories: Category[], selectedCategoryIds: string[]) {
+    const categoryIds = new Set(selectedCategoryIds)
+    const categoriesById = new Map(categories.map(category => [category.id, category]))
 
-    return entries
-        .filter(entry => selectedFeedIds.has(entry.feedId))
-        .toSorted((left, right) => right.date - left.date)
-        .slice(0, selection.maximumArticles)
-        .filter(entry => !excludedEntryIds.has(newsletterEntryId(entry)))
+    return [
+        ...new Set(
+            categories
+                .filter(category => categoryOrAncestorIsSelected(category, categoryIds, categoriesById))
+                .flatMap(category => category.feeds.map(feed => String(feed.id)))
+        ),
+    ]
+}
+
+export function toggleNewsletterEntry(selectedEntries: SelectedNewsletterEntries, entry: Entry): SelectedNewsletterEntries {
+    const entryId = newsletterEntryId(entry)
+    if (selectedEntries[entryId]) {
+        const { [entryId]: _, ...remainingEntries } = selectedEntries
+        return remainingEntries
+    }
+
+    return { ...selectedEntries, [entryId]: entry }
+}
+
+export function selectNewsletterEntries(entries: Entry[]): SelectedNewsletterEntries {
+    return Object.fromEntries(entries.map(entry => [newsletterEntryId(entry), entry]))
+}
+
+export function hasNewsletterScopeChanged(current: NewsletterScope, next: NewsletterScope) {
+    return (
+        current.period !== next.period ||
+        (current.period === "custom" && current.customStartDate !== next.customStartDate) ||
+        normalizedIds(current.categoryIds) !== normalizedIds(next.categoryIds) ||
+        normalizedIds(current.feedIds) !== normalizedIds(next.feedIds)
+    )
+}
+
+export function getNewsletterStartDate(period: NewsletterPeriod, customStartDate?: string, now = new Date()) {
+    if (period === "custom" && customStartDate) {
+        return new Date(`${customStartDate}T00:00:00Z`).getTime()
+    }
+
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+    if (period === "week") start.setUTCDate(start.getUTCDate() - 7)
+    if (period === "month") start.setUTCDate(start.getUTCDate() - 30)
+    return start.getTime()
+}
+
+export function getNewsletterPageCount(total: number | undefined, pageSize: number) {
+    if (!total || total <= 0) return 1
+    return Math.ceil(total / pageSize)
+}
+
+export function newsletterEntryExcerpt(entry: Pick<Entry, "mediaDescription" | "content">) {
+    return plainText(entry.mediaDescription || entry.content)
 }
 
 export function buildNewsletter(document: NewsletterDocument) {
     const palette = palettes[document.template]
     const articles = document.entries
+        .toSorted((left, right) => right.date - left.date)
         .map(entry => {
             const image = document.includeImages && (entry.mediaThumbnailUrl || entry.enclosureUrl)
-            const description = plainText(entry.mediaDescription || entry.content)
+            const description = newsletterEntryExcerpt(entry)
             return `<article class="article">
                 ${image ? `<img class="image" src="${escapeHtml(image)}" alt="" />` : ""}
                 <p class="meta">${escapeHtml(entry.feedName)} · ${formatDate(entry.date)}</p>
@@ -55,7 +106,7 @@ export function buildNewsletter(document: NewsletterDocument) {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Newsletter Ayn Reader OS</title>
+<title>${escapeHtml(document.title)}</title>
 <style>
     body { margin: 0; background: ${palette.canvas}; color: ${palette.surface}; font-family: Arial, sans-serif; line-height: 1.5; }
     main { max-width: 720px; margin: 0 auto; padding: 32px 20px 48px; }
@@ -74,7 +125,7 @@ export function buildNewsletter(document: NewsletterDocument) {
 </head>
 <body>
 <main>
-    <header><div class="brand">Ayn Reader OS</div><h1>La sélection de veille</h1></header>
+    <header><div class="brand">Ayn Reader OS</div><h1>${escapeHtml(document.title)}</h1></header>
     ${articles || "<p>Aucun article n’a été retenu pour cette newsletter.</p>"}
     <footer>Générée le ${formatDate(document.generatedAt.getTime())}.</footer>
 </main>
@@ -82,8 +133,21 @@ export function buildNewsletter(document: NewsletterDocument) {
 </html>`
 }
 
-function plainText(value: string) {
-    return value
+function categoryOrAncestorIsSelected(category: Category, selectedCategoryIds: Set<string>, categoriesById: Map<string, Category>) {
+    let currentCategory: Category | undefined = category
+    while (currentCategory) {
+        if (selectedCategoryIds.has(currentCategory.id)) return true
+        currentCategory = currentCategory.parentId ? categoriesById.get(currentCategory.parentId) : undefined
+    }
+    return false
+}
+
+function normalizedIds(ids: string[]) {
+    return [...new Set(ids)].sort().join(",")
+}
+
+function plainText(value?: string | null) {
+    return (value ?? "")
         .replace(/<[^>]*>/g, " ")
         .replace(/\s+/g, " ")
         .trim()

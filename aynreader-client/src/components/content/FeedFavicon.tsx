@@ -1,22 +1,38 @@
 import { useTimeout } from "@mantine/hooks"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ImageWithPlaceholderWhileLoading } from "@/components/ImageWithPlaceholderWhileLoading"
 
 export interface FeedFaviconProps {
     url: string
+    fallbackUrl?: string
     size?: number
 }
 
-export function FeedFavicon({ url, size = 18 }: Readonly<FeedFaviconProps>) {
+export function FeedFavicon({ url, fallbackUrl, size = 18 }: Readonly<FeedFaviconProps>) {
     // the backend always returns a favicon except when the feed has never been fetched
     // this can happen when the user subscribes to a feed, the feed is added to the tree but the feed has not been fetched yet
     // in this case we retry every second up to 3 times until the feed is fetched and the favicon is available
     const [timestamp, setTimestamp] = useState(0)
     const [retryCount, setRetryCount] = useState(0)
+    const [activeUrl, setActiveUrl] = useState(url)
+    const [usingFallback, setUsingFallback] = useState(false)
     const { start: retry } = useTimeout(() => setTimestamp(Date.now()), 1000)
 
-    const urlWithTimestamp = url + (timestamp === 0 ? "" : `?t=${timestamp}`)
+    useEffect(() => {
+        setActiveUrl(url)
+        setUsingFallback(false)
+        setRetryCount(0)
+        setTimestamp(0)
+    }, [url])
+
+    const urlWithTimestamp = activeUrl + (timestamp === 0 ? "" : `?t=${timestamp}`)
     const handleError = () => {
+        if (!usingFallback && fallbackUrl && fallbackUrl !== activeUrl) {
+            setActiveUrl(fallbackUrl)
+            setUsingFallback(true)
+            setTimestamp(0)
+            return
+        }
         if (retryCount < 3) {
             setRetryCount(c => c + 1)
             retry()

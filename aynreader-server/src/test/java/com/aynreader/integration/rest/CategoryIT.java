@@ -211,6 +211,55 @@ class CategoryIT extends BaseIT {
         }
 
         @Test
+        void subscriptionIds() {
+            Long selectedSubscriptionId =
+                    subscribeAndWaitForEntries(getFeedUrl() + "?source=selected");
+            subscribeAndWaitForEntries(getFeedUrl() + "?source=other");
+
+            var response =
+                    RestAssured.given()
+                            .queryParam("id", CategoryREST.ALL)
+                            .queryParam("readType", "all")
+                            .queryParam("subscriptionIds", selectedSubscriptionId)
+                            .queryParam("includeTotal", true)
+                            .get("rest/category/entries")
+                            .then()
+                            .statusCode(HttpStatus.SC_OK)
+                            .extract();
+
+            Entries entries = response.as(Entries.class);
+
+            Assertions.assertEquals(2, entries.getEntries().size());
+            Assertions.assertEquals(2, ((Number) response.path("total")).intValue());
+            Assertions.assertTrue(
+                    entries.getEntries().stream()
+                            .allMatch(
+                                    entry ->
+                                            entry.getFeedId()
+                                                    .equals(
+                                                            String.valueOf(
+                                                                    selectedSubscriptionId))));
+        }
+
+        @Test
+        void newerThan() {
+            subscribeAndWaitForEntries(getFeedUrl());
+
+            Entries entries =
+                    RestAssured.given()
+                            .queryParam("id", CategoryREST.ALL)
+                            .queryParam("readType", "all")
+                            .queryParam("newerThan", System.currentTimeMillis() + 60_000)
+                            .get("rest/category/entries")
+                            .then()
+                            .statusCode(HttpStatus.SC_OK)
+                            .extract()
+                            .as(Entries.class);
+
+            Assertions.assertTrue(entries.getEntries().isEmpty());
+        }
+
+        @Test
         void allAsFeed() throws FeedException {
             subscribeAndWaitForEntries(getFeedUrl());
             String xml =

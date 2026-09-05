@@ -1,5 +1,6 @@
 import { Box } from "@mantine/core"
 import type { Entry } from "@/app/types"
+import { entryFaviconUrls } from "@/components/content/entryFavicon"
 import { FeedFavicon } from "@/components/content/FeedFavicon"
 import { OpenExternalLink } from "@/components/content/header/OpenExternalLink"
 import { Star } from "@/components/content/header/Star"
@@ -47,11 +48,12 @@ export function FeedEntryCompactHeader(props: Readonly<FeedEntryHeaderProps>) {
     const { classes } = useStyles({
         read: props.entry.read,
     })
+    const faviconUrls = entryFaviconUrls(props.entry)
     return (
         <Box className={classes.wrapper}>
             {props.showStarIcon && <Star entry={props.entry} />}
             <Box>
-                <FeedFavicon url={props.entry.iconUrl} />
+                <FeedFavicon {...faviconUrls} />
             </Box>
             <OnDesktop>
                 <Box c="dimmed" className={classes.feedName}>

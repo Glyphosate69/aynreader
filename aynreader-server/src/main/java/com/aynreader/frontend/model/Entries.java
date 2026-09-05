@@ -39,6 +39,9 @@ public class Entries implements Serializable {
     @Schema(description = "the requested limit")
     private int limit;
 
+    @Schema(description = "total number of entries matching the query")
+    private Long total;
+
     @Schema(description = "list of entries", required = true)
     private List<Entry> entries = new ArrayList<>();
 

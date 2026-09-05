@@ -137,6 +137,28 @@ public class FeedEntryStatusDAO extends GenericDAO<FeedEntryStatus> {
         return statuses;
     }
 
+    public long countStarred(User user, List<FeedEntryKeyword> keywords, Instant newerThan) {
+        JPAQuery<Long> query =
+                query().select(STATUS.id.count())
+                        .from(STATUS)
+                        .where(STATUS.user.eq(user), STATUS.starred.isTrue());
+
+        if (CollectionUtils.isNotEmpty(keywords)) {
+            query.join(STATUS.entry, ENTRY);
+            query.join(ENTRY.content, CONTENT);
+            applyKeywordsFilter(query, keywords);
+        }
+
+        if (newerThan != null) {
+            query.where(STATUS.entryInserted.gt(newerThan));
+        }
+
+        setTimeout(query, config.database().queryTimeout());
+
+        Long count = query.fetchOne();
+        return count == null ? 0 : count;
+    }
+
     public List<FeedEntryStatus> findBySubscriptions(
             User user,
             List<FeedSubscription> subs,
@@ -221,6 +243,49 @@ public class FeedEntryStatusDAO extends GenericDAO<FeedEntryStatus> {
         }
 
         return statuses;
+    }
+
+    public long countBySubscriptions(
+            User user,
+            List<FeedSubscription> subs,
+            boolean unreadOnly,
+            List<FeedEntryKeyword> keywords,
+            Instant newerThan,
+            String tag) {
+        if (subs.isEmpty()) {
+            return 0;
+        }
+
+        Map<Long, List<FeedSubscription>> subsByFeedId =
+                subs.stream().collect(Collectors.groupingBy(s -> s.getFeed().getId()));
+        JPAQuery<Long> query = query().select(ENTRY.id.countDistinct()).from(ENTRY);
+        query.leftJoin(ENTRY.statuses, STATUS).on(STATUS.subscription.in(subs));
+        query.where(ENTRY.feed.id.in(subsByFeedId.keySet()));
+
+        if (CollectionUtils.isNotEmpty(keywords)) {
+            query.join(ENTRY.content, CONTENT);
+            applyKeywordsFilter(query, keywords);
+        }
+
+        if (unreadOnly && tag == null) {
+            query.where(buildUnreadPredicate());
+        }
+
+        if (tag != null) {
+            BooleanBuilder and = new BooleanBuilder();
+            and.and(TAG.user.id.eq(user.getId()));
+            and.and(TAG.name.eq(tag));
+            query.join(ENTRY.tags, TAG).on(and);
+        }
+
+        if (newerThan != null) {
+            query.where(ENTRY.inserted.goe(newerThan));
+        }
+
+        setTimeout(query, config.database().queryTimeout());
+
+        Long count = query.fetchOne();
+        return count == null ? 0 : count;
     }
 
     private void applyKeywordsFilter(JPAQuery<?> query, List<FeedEntryKeyword> keywords) {

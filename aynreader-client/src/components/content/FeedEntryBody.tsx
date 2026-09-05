@@ -11,6 +11,7 @@ export interface FeedEntryBodyProps {
 
 export function FeedEntryBody(props: Readonly<FeedEntryBodyProps>) {
     const search = useAppSelector(state => state.entries.search)
+    const contentHasImage = /<img\b/i.test(props.entry.content ?? "")
     return (
         <Box>
             <Box>
@@ -21,8 +22,7 @@ export function FeedEntryBody(props: Readonly<FeedEntryBodyProps>) {
                     <Enclosure enclosureType={props.entry.enclosureType} enclosureUrl={props.entry.enclosureUrl} />
                 </Box>
             )}
-            {/* show media only if we don't have content to avoid duplicate content */}
-            {!props.entry.content && props.entry.mediaThumbnailUrl && (
+            {!contentHasImage && props.entry.mediaThumbnailUrl && (
                 <Box pt="md">
                     <Media
                         thumbnailUrl={props.entry.mediaThumbnailUrl}

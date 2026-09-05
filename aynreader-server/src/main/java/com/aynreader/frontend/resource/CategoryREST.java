@@ -132,6 +132,13 @@ public class CategoryREST {
             @Parameter(description = "comma-separated list of excluded subscription ids")
                     @QueryParam("excludedSubscriptionIds")
                     String excludedSubscriptionIds,
+            @Parameter(description = "comma-separated list of subscription ids to include")
+                    @QueryParam("subscriptionIds")
+                    String subscriptionIds,
+            @Parameter(description = "include the total number of matching entries")
+                    @DefaultValue("false")
+                    @QueryParam("includeTotal")
+                    boolean includeTotal,
             @Parameter(description = "keep only entries tagged with this tag") @QueryParam("tag")
                     String tag) {
 
@@ -158,17 +165,23 @@ public class CategoryREST {
             excludedIds =
                     Arrays.stream(excludedSubscriptionIds.split(",")).map(Long::valueOf).toList();
         }
+        List<Long> includedIds = null;
+        if (StringUtils.isNotEmpty(subscriptionIds)) {
+            includedIds = Arrays.stream(subscriptionIds.split(",")).map(Long::valueOf).toList();
+        }
 
         User user = authenticationContext.getCurrentUser();
+        List<FeedSubscription> matchedSubscriptions = null;
         if (ALL.equals(id)) {
             entries.setName(Optional.ofNullable(tag).orElse("All"));
 
-            List<FeedSubscription> subs = feedSubscriptionDAO.findAll(user);
-            removeExcludedSubscriptions(subs, excludedIds);
+            matchedSubscriptions = feedSubscriptionDAO.findAll(user);
+            removeExcludedSubscriptions(matchedSubscriptions, excludedIds);
+            removeNonSelectedSubscriptions(matchedSubscriptions, includedIds);
             List<FeedEntryStatus> list =
                     feedEntryStatusDAO.findBySubscriptions(
                             user,
-                            subs,
+                            matchedSubscriptions,
                             unreadOnly,
                             entryKeywords,
                             newerThanDate,
@@ -197,13 +210,13 @@ public class CategoryREST {
             if (parent != null) {
                 List<FeedCategory> categories =
                         feedCategoryDAO.findAllChildrenCategories(user, parent);
-                List<FeedSubscription> subs =
-                        feedSubscriptionDAO.findByCategories(user, categories);
-                removeExcludedSubscriptions(subs, excludedIds);
+                matchedSubscriptions = feedSubscriptionDAO.findByCategories(user, categories);
+                removeExcludedSubscriptions(matchedSubscriptions, excludedIds);
+                removeNonSelectedSubscriptions(matchedSubscriptions, includedIds);
                 List<FeedEntryStatus> list =
                         feedEntryStatusDAO.findBySubscriptions(
                                 user,
-                                subs,
+                                matchedSubscriptions,
                                 unreadOnly,
                                 entryKeywords,
                                 newerThanDate,
@@ -224,6 +237,20 @@ public class CategoryREST {
                         .entity("<message>category not found</message>")
                         .build();
             }
+        }
+
+        if (includeTotal) {
+            long total =
+                    STARRED.equals(id)
+                            ? feedEntryStatusDAO.countStarred(user, entryKeywords, newerThanDate)
+                            : feedEntryStatusDAO.countBySubscriptions(
+                                    user,
+                                    matchedSubscriptions,
+                                    unreadOnly,
+                                    entryKeywords,
+                                    newerThanDate,
+                                    tag);
+            entries.setTotal(total);
         }
 
         boolean hasMore = entries.getEntries().size() > limit;
@@ -270,6 +297,9 @@ public class CategoryREST {
             @Parameter(description = "comma-separated list of excluded subscription ids")
                     @QueryParam("excludedSubscriptionIds")
                     String excludedSubscriptionIds,
+            @Parameter(description = "comma-separated list of subscription ids to include")
+                    @QueryParam("subscriptionIds")
+                    String subscriptionIds,
             @Parameter(description = "keep only entries tagged with this tag") @QueryParam("tag")
                     String tag) {
 
@@ -283,6 +313,8 @@ public class CategoryREST {
                         order,
                         keywords,
                         excludedSubscriptionIds,
+                        subscriptionIds,
+                        false,
                         tag);
         if (response.getStatus() != Status.OK.getStatusCode()) {
             return response;
@@ -350,6 +382,13 @@ public class CategoryREST {
     private void removeExcludedSubscriptions(List<FeedSubscription> subs, List<Long> excludedIds) {
         if (CollectionUtils.isNotEmpty(excludedIds)) {
             subs.removeIf(sub -> excludedIds.contains(sub.getId()));
+        }
+    }
+
+    private void removeNonSelectedSubscriptions(
+            List<FeedSubscription> subs, List<Long> includedIds) {
+        if (CollectionUtils.isNotEmpty(includedIds)) {
+            subs.removeIf(sub -> !includedIds.contains(sub.getId()));
         }
     }
 

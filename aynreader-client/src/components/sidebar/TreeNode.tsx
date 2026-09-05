@@ -21,6 +21,19 @@ interface TreeNodeProps {
     onIconClick?: (e: React.MouseEvent, id: string) => void
 }
 
+export const treeNodeLayout = {
+    label: {
+        flexGrow: 1,
+        minWidth: 0,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+    },
+    unreadCount: {
+        flexShrink: 0,
+    },
+}
+
 const useStyles = tss
     .withParams<{
         selected: boolean
@@ -56,12 +69,8 @@ const useStyles = tss
                     backgroundColor: colorScheme === "dark" ? "var(--ayn-dark-surface-high)" : "var(--ayn-gray-50)",
                 },
             },
-            nodeText: {
-                flexGrow: 1,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-            },
+            nodeText: treeNodeLayout.label,
+            unreadCount: treeNodeLayout.unreadCount,
         }
     })
 
@@ -87,7 +96,7 @@ export function TreeNode(props: Readonly<TreeNodeProps>) {
             </Box>
             <Box className={classes.nodeText}>{props.name}</Box>
             {!props.expanded && (
-                <Box className="cf-treenode-unread-count">
+                <Box className={`${classes.unreadCount} cf-treenode-unread-count`}>
                     <UnreadCount unreadCount={props.unread} showIndicator={props.hasNewEntries} />
                 </Box>
             )}

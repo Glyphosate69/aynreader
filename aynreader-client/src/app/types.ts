@@ -93,6 +93,7 @@ export interface Entries {
     hasMore: boolean
     offset?: number
     limit?: number
+    total?: number
     entries: Entry[]
     ignoredReadStatus: boolean
 }
@@ -123,12 +124,14 @@ export interface GetEntriesRequest {
     order?: ReadingOrder
     keywords?: string
     excludedSubscriptionIds?: string
+    subscriptionIds?: string
     tag?: string
 }
 
 export interface GetEntriesPaginatedRequest extends GetEntriesRequest {
     offset: number
     limit: number
+    includeTotal?: boolean
 }
 
 export interface IDRequest {
@@ -297,16 +300,11 @@ export interface LocalSettings {
 }
 
 export interface NewsletterSettings {
-    frequency: "daily" | "weekly"
     template: "brief" | "digest" | "editorial" | "radar"
     categoryIds: string[]
-    feedIds: string[]
-    maximumArticles: number
-    similarityEnabled: boolean
-    similarity: number
-    groupSimilar: boolean
+    period: "today" | "week" | "month" | "custom"
+    customStartDate?: string
     includeImages: boolean
-    excludedEntryIds?: string[]
 }
 
 export interface StarRequest {

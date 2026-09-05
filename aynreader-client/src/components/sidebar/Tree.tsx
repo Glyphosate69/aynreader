@@ -28,6 +28,7 @@ const expandedIcon = <TbChevronDown size={16} />
 const collapsedIcon = <TbChevronRight size={16} />
 
 const errorThreshold = 9
+export const treeGridLayout = { gridTemplateColumns: "minmax(0, 1fr)" }
 
 export function Tree() {
     const root = useAppSelector(state => state.tree.rootCategory)
@@ -194,7 +195,7 @@ export function Tree() {
             <OnDesktop>
                 <TreeSearch feeds={feeds} />
             </OnDesktop>
-            <Box className="cf-tree">
+            <Box className="cf-tree" style={treeGridLayout}>
                 {allCategoryNode()}
                 {starredCategoryNode()}
                 {root.children.map(c => recursiveCategoryNode(c))}

@@ -1,5 +1,6 @@
 import { Box, Flex, Space } from "@mantine/core"
 import type { Entry } from "@/app/types"
+import { entryFaviconUrls } from "@/components/content/entryFavicon"
 import { FeedFavicon } from "@/components/content/FeedFavicon"
 import { OpenExternalLink } from "@/components/content/header/OpenExternalLink"
 import { Star } from "@/components/content/header/Star"
@@ -28,6 +29,7 @@ export function FeedEntryHeader(props: Readonly<FeedEntryHeaderProps>) {
     const { classes } = useStyles({
         read: props.entry.read,
     })
+    const faviconUrls = entryFaviconUrls(props.entry)
     return (
         <Box className="cf-header">
             <Flex align="flex-start" justify="space-between" className="cf-header-title">
@@ -42,7 +44,7 @@ export function FeedEntryHeader(props: Readonly<FeedEntryHeaderProps>) {
                 {props.showExternalLinkIcon && <OpenExternalLink entry={props.entry} />}
             </Flex>
             <Flex align="center" className="cf-header-subtitle">
-                <FeedFavicon url={props.entry.iconUrl} />
+                <FeedFavicon {...faviconUrls} />
                 <Space w={6} />
                 <Box c="dimmed">
                     {props.entry.feedName}

@@ -1,217 +1,263 @@
 import {
-    Badge,
+    ActionIcon,
     Box,
     Button,
     Checkbox,
     Divider,
-    Grid,
     Group,
     MultiSelect,
-    NumberInput,
-    Paper,
     SegmentedControl,
-    Slider,
     Stack,
+    Stepper,
     Switch,
     Text,
+    TextInput,
     Title,
+    Tooltip,
     UnstyledButton,
 } from "@mantine/core"
+import { DateInput } from "@mantine/dates"
+import { openConfirmModal } from "@mantine/modals"
 import { showNotification } from "@mantine/notifications"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { TbAdjustments, TbCalendar, TbCheck, TbDownload, TbLayoutCards, TbListDetails, TbMail, TbSparkles } from "react-icons/tb"
+import { TbArrowLeft, TbArrowRight, TbCheck, TbChecks, TbDownload, TbMail, TbSearch } from "react-icons/tb"
 import { client } from "@/app/client"
 import { Constants } from "@/app/constants"
 import { useAppDispatch, useAppSelector } from "@/app/store"
-import type { Entry, NewsletterSettings } from "@/app/types"
+import type { Entries, Entry, NewsletterSettings } from "@/app/types"
 import { setNewsletterSettings } from "@/app/user/slice"
 import { flattenCategoryTree } from "@/app/utils"
-import { buildNewsletter, newsletterEntryId, selectNewsletterEntries } from "./newsletter"
+import {
+    buildNewsletter,
+    getCategoryFeedIds,
+    getNewsletterPageCount,
+    getNewsletterStartDate,
+    hasNewsletterScopeChanged,
+    type NewsletterPeriod,
+    type NewsletterScope,
+    type NewsletterTemplate,
+    newsletterEntryExcerpt,
+    newsletterEntryId,
+    type SelectedNewsletterEntries,
+    selectNewsletterEntries,
+    toggleNewsletterEntry,
+} from "./newsletter"
 
-type NewsletterTemplate = "brief" | "digest" | "editorial" | "radar"
+const PAGE_SIZE = 25
+const BULK_SELECTION_PAGE_SIZE = 1000
 
 const templateOptions: Array<{
     id: NewsletterTemplate
     name: string
-    description: string
-    icon: typeof TbLayoutCards
-    palette: {
-        accent: string
-        canvas: string
-        surface: string
-        text: string
-    }
+    accent: string
 }> = [
-    {
-        id: "brief",
-        name: "Ayn Signal",
-        description: "Un sujet de tête et les signaux essentiels.",
-        icon: TbSparkles,
-        palette: { accent: "#B8F03C", canvas: "#F2F4F0", surface: "#101413", text: "#F2F4F0" },
-    },
-    {
-        id: "digest",
-        name: "Bleu analytique",
-        description: "Un digest clair, pensé pour la décision.",
-        icon: TbListDetails,
-        palette: { accent: "#0F62FE", canvas: "#F3F7FF", surface: "#12325F", text: "#FFFFFF" },
-    },
-    {
-        id: "editorial",
-        name: "Éditorial corail",
-        description: "Une sélection commentée, article par article.",
-        icon: TbMail,
-        palette: { accent: "#D94841", canvas: "#FFF5F2", surface: "#4A2420", text: "#FFF9F7" },
-    },
-    {
-        id: "radar",
-        name: "Radar forêt",
-        description: "Des signaux classés par thématique de veille.",
-        icon: TbLayoutCards,
-        palette: { accent: "#2E8B70", canvas: "#F0FAF5", surface: "#173D33", text: "#F4FFFA" },
-    },
+    { id: "brief", name: "Ayn Signal", accent: "#B8F03C" },
+    { id: "digest", name: "Bleu analytique", accent: "#0F62FE" },
+    { id: "editorial", name: "Éditorial corail", accent: "#D94841" },
+    { id: "radar", name: "Radar forêt", accent: "#2E8B70" },
 ]
-
-const templateLabels: Record<NewsletterTemplate, string> = {
-    brief: "Ayn Signal",
-    digest: "Bleu analytique",
-    editorial: "Éditorial corail",
-    radar: "Radar forêt",
-}
 
 export function NewsletterPage() {
     const rootCategory = useAppSelector(state => state.tree.rootCategory)
     const savedSettings = useAppSelector(state => state.user.localSettings.newsletter)
+    const dispatch = useAppDispatch()
+    const initializedSources = useRef(false)
+
     const categories = useMemo(
         () => (rootCategory ? flattenCategoryTree(rootCategory).filter(category => category.id !== Constants.categories.all.id) : []),
         [rootCategory]
     )
-    const feeds = useMemo(() => categories.flatMap(category => category.feeds), [categories])
-    const initializedSources = useRef(false)
-    const dispatch = useAppDispatch()
+    const legacyFeedIds = (savedSettings as (NewsletterSettings & { feedIds?: string[] }) | undefined)?.feedIds
 
-    const [frequency, setFrequency] = useState(savedSettings?.frequency ?? "weekly")
-    const [template, setTemplate] = useState<NewsletterTemplate>(savedSettings?.template ?? "digest")
-    const [selectedCategories, setSelectedCategories] = useState<string[]>(savedSettings?.categoryIds ?? [])
-    const [selectedFeeds, setSelectedFeeds] = useState<string[]>(savedSettings?.feedIds ?? [])
-    const [maxArticles, setMaxArticles] = useState<number | string>(savedSettings?.maximumArticles ?? 12)
-    const [similarityEnabled, setSimilarityEnabled] = useState(savedSettings?.similarityEnabled ?? true)
-    const [similarity, setSimilarity] = useState(savedSettings?.similarity ?? 72)
-    const [groupSimilar, setGroupSimilar] = useState(savedSettings?.groupSimilar ?? true)
-    const [includeImages, setIncludeImages] = useState(savedSettings?.includeImages ?? true)
-    const [excludedEntryIds, setExcludedEntryIds] = useState(savedSettings?.excludedEntryIds ?? [])
-    const [availableEntries, setAvailableEntries] = useState<Entry[]>([])
-    const [entriesLoading, setEntriesLoading] = useState(true)
+    const [activeStep, setActiveStep] = useState(0)
+    const [selectedCategories, setSelectedCategories] = useState<string[]>(() => savedSettings?.categoryIds ?? [])
+    const [period, setPeriod] = useState<NewsletterPeriod>(() => newsletterPeriod(savedSettings?.period))
+    const [customStartDate, setCustomStartDate] = useState<string | undefined>(() => savedSettings?.customStartDate)
+    const [template, setTemplate] = useState<NewsletterTemplate>(() => savedSettings?.template ?? "digest")
+    const [includeImages, setIncludeImages] = useState(() => savedSettings?.includeImages ?? true)
+    const [appliedScope, setAppliedScope] = useState<NewsletterScope>()
+    const [entries, setEntries] = useState<Entries>()
+    const [entriesLoading, setEntriesLoading] = useState(false)
+    const [selectingAllEntries, setSelectingAllEntries] = useState(false)
+    const [page, setPage] = useState(0)
+    const [searchInput, setSearchInput] = useState("")
+    const [searchQuery, setSearchQuery] = useState("")
+    const [selectedEntries, setSelectedEntries] = useState<SelectedNewsletterEntries>({})
+    const [title, setTitle] = useState(() => defaultNewsletterTitle())
+
+    const categoryOptions = useMemo(
+        () =>
+            categories.map(category => ({
+                value: category.id,
+                label: category.name,
+            })),
+        [categories]
+    )
 
     useEffect(() => {
         if (initializedSources.current || !categories.length) return
         initializedSources.current = true
-        if (!savedSettings) {
-            setSelectedCategories(categories.map(category => category.id))
-            setSelectedFeeds(feeds.map(feed => String(feed.id)))
-        }
-    }, [categories, feeds, savedSettings])
 
-    useEffect(() => {
         const categoryIds = new Set(categories.map(category => category.id))
-        setSelectedCategories(current => current.filter(id => categoryIds.has(id)))
-    }, [categories])
+        setSelectedCategories(current => {
+            if (savedSettings?.categoryIds) return current.filter(id => categoryIds.has(id))
+            if (legacyFeedIds) {
+                return categories
+                    .filter(category => category.feeds.some(feed => legacyFeedIds.includes(String(feed.id))))
+                    .map(category => category.id)
+            }
+            return categories.map(category => category.id)
+        })
+    }, [categories, legacyFeedIds, savedSettings?.categoryIds])
+
+    const selectedFeedIds = useMemo(() => getCategoryFeedIds(categories, selectedCategories), [categories, selectedCategories])
+    const currentScope = useMemo<NewsletterScope>(
+        () => ({
+            categoryIds: selectedCategories,
+            feedIds: selectedFeedIds,
+            period,
+            customStartDate,
+        }),
+        [customStartDate, period, selectedCategories, selectedFeedIds]
+    )
+
+    const selectedEntriesList = useMemo(() => Object.values(selectedEntries), [selectedEntries])
+    const previewTitle = title.trim() || defaultNewsletterTitle()
+    const newsletterHtml = useMemo(
+        () =>
+            buildNewsletter({
+                entries: selectedEntriesList,
+                template,
+                includeImages,
+                generatedAt: new Date(),
+                title: previewTitle,
+            }),
+        [includeImages, previewTitle, selectedEntriesList, template]
+    )
 
     useEffect(() => {
+        if (activeStep !== 1 || !appliedScope) return
+
         let active = true
+        setEntriesLoading(true)
         client.category
             .getEntries({
                 id: Constants.categories.all.id,
                 readType: "all",
+                newerThan: getNewsletterStartDate(appliedScope.period, appliedScope.customStartDate),
                 order: "desc",
-                offset: 0,
-                limit: 100,
+                offset: page * PAGE_SIZE,
+                limit: PAGE_SIZE,
+                keywords: searchQuery || undefined,
+                subscriptionIds: appliedScope.feedIds.join(","),
+                includeTotal: true,
             })
-            .then(result => {
-                if (active) setAvailableEntries(result.data.entries)
+            .then(response => {
+                if (active) setEntries(response.data)
             })
             .catch(() => {
-                if (active) {
-                    showNotification({
-                        title: "Articles indisponibles",
-                        message: "La sélection sera disponible après le prochain chargement de la veille.",
-                        color: "red",
-                    })
-                }
+                if (!active) return
+                setEntries(undefined)
+                showNotification({
+                    title: "Articles indisponibles",
+                    message: "Impossible de charger les articles correspondant à ce périmètre.",
+                    color: "red",
+                })
             })
             .finally(() => {
                 if (active) setEntriesLoading(false)
             })
+
         return () => {
             active = false
         }
-    }, [])
+    }, [activeStep, appliedScope, page, searchQuery])
 
-    const selectedFeedNames = feeds.filter(feed => selectedFeeds.includes(String(feed.id))).map(feed => feed.name)
-    const selectedCategoryNames = categories.filter(category => selectedCategories.includes(category.id)).map(category => category.name)
-    const articleCount = typeof maxArticles === "number" ? maxArticles : 12
-    const frequencyLabel = frequency === "daily" ? "Chaque matin" : "Chaque lundi"
-    const activeTemplate = templateOptions.find(option => option.id === template) || templateOptions[0]
-    const candidateEntries = selectNewsletterEntries(availableEntries, {
-        feedIds: selectedFeeds,
-        excludedEntryIds: [],
-        maximumArticles: articleCount,
-    })
-    const selectedEntries = candidateEntries.filter(entry => !excludedEntryIds.includes(newsletterEntryId(entry)))
-
-    const getSettings = (): NewsletterSettings => {
-        return {
-            frequency: frequency as NewsletterSettings["frequency"],
-            template,
-            categoryIds: selectedCategories,
-            feedIds: selectedFeeds,
-            maximumArticles: articleCount,
-            similarityEnabled,
-            similarity,
-            groupSimilar,
-            includeImages,
-            excludedEntryIds,
+    const savePreferences = (scope = currentScope, nextTemplate = template, nextIncludeImages = includeImages) => {
+        const settings: NewsletterSettings = {
+            categoryIds: scope.categoryIds,
+            period: scope.period,
+            customStartDate: scope.customStartDate,
+            template: nextTemplate,
+            includeImages: nextIncludeImages,
         }
-    }
-
-    const applySettings = () => {
-        const settings = getSettings()
         dispatch(setNewsletterSettings(settings))
-        showNotification({
-            title: "Configuration appliquée",
-            message: `${templateLabels[template]} · ${frequency === "daily" ? "quotidienne" : "hebdomadaire"} · ${similarityEnabled ? "similarité active" : "sans similarité"}.`,
-            color: "green",
-            icon: <TbCheck size={16} />,
-        })
     }
 
-    const toggleEntry = (entry: Entry) => {
-        const entryId = newsletterEntryId(entry)
-        setExcludedEntryIds(current => (current.includes(entryId) ? current.filter(id => id !== entryId) : [...current, entryId]))
-    }
-
-    const downloadNewsletter = () => {
-        if (!selectedEntries.length) {
+    const continueToArticleSelection = () => {
+        if (!currentScope.categoryIds.length) {
             showNotification({
-                title: "Aucun article à télécharger",
-                message: "Sélectionne au moins une source ou réintègre un article.",
+                title: "Sélectionne au moins une catégorie",
+                message: "La newsletter est construite à partir des catégories choisies.",
+                color: "orange",
+            })
+            return
+        }
+        if (currentScope.period === "custom" && !currentScope.customStartDate) {
+            showNotification({
+                title: "Choisis une date de début",
+                message: "La période personnalisée a besoin d'une date de début.",
                 color: "orange",
             })
             return
         }
 
-        const settings: NewsletterSettings = {
-            ...getSettings(),
+        const openArticleSelection = () => {
+            const scopeChanged = appliedScope && hasNewsletterScopeChanged(appliedScope, currentScope)
+            if (scopeChanged) setSelectedEntries({})
+            setAppliedScope(currentScope)
+            setEntries(undefined)
+            setPage(0)
+            setSearchInput("")
+            setSearchQuery("")
+            savePreferences()
+            setActiveStep(1)
         }
-        dispatch(setNewsletterSettings(settings))
 
-        const html = buildNewsletter({
-            entries: selectedEntries,
-            template,
-            includeImages,
-            generatedAt: new Date(),
-        })
-        const url = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }))
+        if (appliedScope && selectedEntriesList.length && hasNewsletterScopeChanged(appliedScope, currentScope)) {
+            openConfirmModal({
+                title: "Modifier le périmètre ?",
+                children: <Text size="sm">Les articles déjà sélectionnés seront retirés du brouillon.</Text>,
+                labels: { confirm: "Modifier le périmètre", cancel: "Annuler" },
+                confirmProps: { color: "red" },
+                onConfirm: openArticleSelection,
+            })
+            return
+        }
+
+        openArticleSelection()
+    }
+
+    const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault()
+        setPage(0)
+        setSearchQuery(searchInput.trim())
+    }
+
+    const continueToPreview = () => {
+        if (!selectedEntriesList.length) {
+            showNotification({
+                title: "Aucun article sélectionné",
+                message: "Coche au moins un article pour composer la newsletter.",
+                color: "orange",
+            })
+            return
+        }
+        setActiveStep(2)
+    }
+
+    const downloadNewsletter = () => {
+        if (!title.trim()) {
+            showNotification({
+                title: "Titre requis",
+                message: "Donne un titre à la newsletter avant le téléchargement.",
+                color: "orange",
+            })
+            return
+        }
+
+        savePreferences()
+        const url = URL.createObjectURL(new Blob([newsletterHtml], { type: "text/html;charset=utf-8" }))
         const link = document.createElement("a")
         link.href = url
         link.download = `aynreader-newsletter-${new Date().toISOString().slice(0, 10)}.html`
@@ -221,14 +267,64 @@ export function NewsletterPage() {
         window.setTimeout(() => URL.revokeObjectURL(url), 0)
         showNotification({
             title: "Newsletter téléchargée",
-            message: `${selectedEntries.length} article(s) ont été ajoutés au fichier HTML.`,
+            message: `${selectedEntriesList.length} article(s) ont été ajoutés au fichier HTML.`,
             color: "green",
             icon: <TbCheck size={16} />,
         })
     }
 
+    const selectTemplate = (nextTemplate: NewsletterTemplate) => {
+        setTemplate(nextTemplate)
+        savePreferences(currentScope, nextTemplate)
+    }
+
+    const selectImages = (nextIncludeImages: boolean) => {
+        setIncludeImages(nextIncludeImages)
+        savePreferences(currentScope, template, nextIncludeImages)
+    }
+
+    const totalEntries = entries?.total ?? 0
+    const totalPages = getNewsletterPageCount(totalEntries, PAGE_SIZE)
+    const allEntriesSelected = totalEntries > 0 && selectedEntriesList.length === totalEntries
+
+    const toggleAllEntries = async () => {
+        if (!appliedScope) return
+
+        if (allEntriesSelected) {
+            setSelectedEntries({})
+            return
+        }
+
+        setSelectingAllEntries(true)
+        try {
+            const allEntries: Entry[] = []
+            for (let offset = 0; offset < totalEntries; offset += BULK_SELECTION_PAGE_SIZE) {
+                const response = await client.category.getEntries({
+                    id: Constants.categories.all.id,
+                    readType: "all",
+                    newerThan: getNewsletterStartDate(appliedScope.period, appliedScope.customStartDate),
+                    order: "desc",
+                    offset,
+                    limit: Math.min(BULK_SELECTION_PAGE_SIZE, totalEntries - offset),
+                    keywords: searchQuery || undefined,
+                    subscriptionIds: appliedScope.feedIds.join(","),
+                })
+                allEntries.push(...response.data.entries)
+            }
+            setSelectedEntries(selectNewsletterEntries(allEntries))
+        } catch {
+            showNotification({
+                title: "Sélection impossible",
+                message: "Impossible de récupérer tous les articles correspondant à ce périmètre.",
+                color: "red",
+            })
+        } finally {
+            setSelectingAllEntries(false)
+        }
+    }
+
     return (
-        <Box maw={1180} mx="auto" w="100%" pb="xl">
+        <Box maw={1280} mx="auto" w="100%" pb="xl">
             <Group justify="space-between" align="flex-start" mb="xl" gap="md">
                 <Box>
                     <Group gap="xs" mb={4}>
@@ -238,330 +334,271 @@ export function NewsletterPage() {
                         </Text>
                     </Group>
                     <Title order={2}>Newsletter</Title>
-                    <Text c="dimmed" mt={4}>
-                        Compose la sélection, le rythme et la présentation de ta veille.
-                    </Text>
                 </Box>
             </Group>
 
-            <Grid gap={{ base: "xl", md: 48 }}>
-                <Grid.Col span={{ base: 12, md: 7 }}>
+            <Stepper active={activeStep} onStepClick={step => step < activeStep && setActiveStep(step)} mb="xl">
+                <Stepper.Step label="Périmètre" description="Catégories et période" allowStepSelect={activeStep > 0}>
                     <Stack gap="xl">
+                        <MultiSelect
+                            label="Catégories"
+                            placeholder="Rechercher une catégorie"
+                            data={categoryOptions}
+                            value={selectedCategories}
+                            onChange={setSelectedCategories}
+                            searchable
+                            clearable
+                            maxDropdownHeight={280}
+                            nothingFoundMessage="Aucune catégorie"
+                        />
+
                         <Box>
-                            <Group gap="xs" mb="sm">
-                                <TbCalendar size={18} />
-                                <Title order={4}>Cadence</Title>
-                            </Group>
+                            <Text size="sm" fw={500} mb={6}>
+                                Période
+                            </Text>
                             <SegmentedControl
                                 fullWidth
-                                value={frequency}
-                                onChange={setFrequency}
+                                value={period}
+                                onChange={value => setPeriod(value as NewsletterPeriod)}
                                 data={[
-                                    { value: "daily", label: "Quotidienne" },
-                                    { value: "weekly", label: "Hebdomadaire" },
+                                    { value: "today", label: "Aujourd'hui" },
+                                    { value: "week", label: "7 jours" },
+                                    { value: "month", label: "30 jours" },
+                                    { value: "custom", label: "Depuis le…" },
                                 ]}
                             />
                         </Box>
 
-                        <Box>
-                            <Group justify="space-between" align="center" mb="sm">
-                                <Box>
-                                    <Title order={4}>Articles retenus</Title>
-                                    <Text size="xs" c="dimmed">
-                                        Décoche un article pour le retirer du téléchargement.
-                                    </Text>
-                                </Box>
-                                <Badge variant="light" color="gray">
-                                    {selectedEntries.length} / {articleCount}
-                                </Badge>
-                            </Group>
-                            <Stack gap={0}>
-                                {entriesLoading && (
-                                    <Text size="sm" c="dimmed">
-                                        Chargement des articles…
-                                    </Text>
-                                )}
-                                {!entriesLoading && !candidateEntries.length && (
-                                    <Text size="sm" c="dimmed">
-                                        Aucun article ne correspond aux sources sélectionnées.
-                                    </Text>
-                                )}
-                                {candidateEntries.map(entry => {
-                                    const selected = !excludedEntryIds.includes(newsletterEntryId(entry))
-                                    return (
-                                        <Box
-                                            key={newsletterEntryId(entry)}
-                                            py="sm"
-                                            style={{ borderBottom: "1px solid var(--mantine-color-gray-3)" }}
-                                        >
-                                            <Checkbox
-                                                checked={selected}
-                                                onChange={() => toggleEntry(entry)}
-                                                label={
-                                                    <Box>
-                                                        <Text size="sm" fw={600} lineClamp={2}>
-                                                            {entry.title}
-                                                        </Text>
-                                                        <Text size="xs" c="dimmed">
-                                                            {entry.feedName}
-                                                        </Text>
-                                                    </Box>
-                                                }
-                                            />
-                                        </Box>
-                                    )
-                                })}
-                            </Stack>
-                        </Box>
-
-                        <Box>
-                            <Group gap="xs" mb="sm">
-                                <TbLayoutCards size={18} />
-                                <Title order={4}>Modèle</Title>
-                            </Group>
-                            <Grid gap="sm">
-                                {templateOptions.map(option => {
-                                    const Icon = option.icon
-                                    const selected = template === option.id
-                                    return (
-                                        <Grid.Col span={{ base: 12, sm: 6 }} key={option.id}>
-                                            <UnstyledButton
-                                                aria-pressed={selected}
-                                                onClick={() => setTemplate(option.id)}
-                                                style={{ display: "block", width: "100%" }}
-                                            >
-                                                <Paper
-                                                    withBorder
-                                                    p="md"
-                                                    h="100%"
-                                                    bg={selected ? option.palette.canvas : undefined}
-                                                    style={{
-                                                        borderColor: selected ? option.palette.accent : undefined,
-                                                        borderWidth: selected ? 2 : 1,
-                                                    }}
-                                                >
-                                                    <Group justify="space-between" align="flex-start" mb="md">
-                                                        <Group gap={5}>
-                                                            {[option.palette.accent, option.palette.surface, option.palette.canvas].map(
-                                                                color => (
-                                                                    <Box
-                                                                        key={color}
-                                                                        w={14}
-                                                                        h={14}
-                                                                        style={{ backgroundColor: color, borderRadius: "50%" }}
-                                                                    />
-                                                                )
-                                                            )}
-                                                        </Group>
-                                                        {selected && <TbCheck size={18} />}
-                                                    </Group>
-                                                    <Box
-                                                        h={26}
-                                                        mb="md"
-                                                        style={{
-                                                            backgroundColor: option.palette.surface,
-                                                            borderLeft: `4px solid ${option.palette.accent}`,
-                                                        }}
-                                                    />
-                                                    <Icon size={18} color={option.palette.accent} />
-                                                    <Text fw={700} size="sm">
-                                                        {option.name}
-                                                    </Text>
-                                                    <Text size="xs" c="dimmed" mt={5}>
-                                                        {option.description}
-                                                    </Text>
-                                                </Paper>
-                                            </UnstyledButton>
-                                        </Grid.Col>
-                                    )
-                                })}
-                            </Grid>
-                        </Box>
-
-                        <Box>
-                            <Group gap="xs" mb="sm">
-                                <TbListDetails size={18} />
-                                <Title order={4}>Contenus à inclure</Title>
-                            </Group>
-                            <Stack gap="sm">
-                                <MultiSelect
-                                    label="Catégories"
-                                    placeholder="Choisir les catégories"
-                                    data={categories.map(category => ({ value: category.id, label: category.name }))}
-                                    value={selectedCategories}
-                                    onChange={setSelectedCategories}
-                                    searchable
-                                    clearable
-                                />
-                                <Checkbox.Group label="Sources" value={selectedFeeds} onChange={setSelectedFeeds}>
-                                    <Grid mt={4} gap="xs">
-                                        {feeds.map(feed => (
-                                            <Grid.Col span={{ base: 12, sm: 6 }} key={feed.id}>
-                                                <Checkbox value={String(feed.id)} label={feed.name} />
-                                            </Grid.Col>
-                                        ))}
-                                    </Grid>
-                                </Checkbox.Group>
-                                {!feeds.length && (
-                                    <Text size="sm" c="dimmed">
-                                        Ajoute des sources pour pouvoir les sélectionner dans la newsletter.
-                                    </Text>
-                                )}
-                            </Stack>
-                        </Box>
-
-                        <Box>
-                            <Group gap="xs" mb="sm">
-                                <TbAdjustments size={18} />
-                                <Title order={4}>Similarité et édition</Title>
-                            </Group>
-                            <Stack gap="md">
-                                <Box>
-                                    <Group justify="space-between" mb={4}>
-                                        <Box>
-                                            <Text size="sm" fw={500}>
-                                                Détecter les contenus similaires
-                                            </Text>
-                                            <Text size="xs" c="dimmed">
-                                                Utilise all-MiniLM-L6-v2 pour éviter les doublons dans l'envoi.
-                                            </Text>
-                                        </Box>
-                                        <Switch
-                                            checked={similarityEnabled}
-                                            onChange={event => setSimilarityEnabled(event.currentTarget.checked)}
-                                            aria-label="Activer la similarité"
-                                        />
-                                    </Group>
-                                    <Group justify="space-between" mb={4}>
-                                        <Text size="sm" c={similarityEnabled ? undefined : "dimmed"}>
-                                            Seuil de similarité
-                                        </Text>
-                                        <Text size="sm" c="dimmed">
-                                            {similarityEnabled ? (similarity / 100).toFixed(2) : "Désactivée"}
-                                        </Text>
-                                    </Group>
-                                    <Slider
-                                        value={similarity}
-                                        onChange={setSimilarity}
-                                        disabled={!similarityEnabled}
-                                        min={50}
-                                        max={95}
-                                        step={1}
-                                        marks={[
-                                            { value: 60, label: "0.60" },
-                                            { value: 75, label: "0.75" },
-                                            { value: 90, label: "0.90" },
-                                        ]}
-                                    />
-                                </Box>
-                                <NumberInput
-                                    label="Nombre maximum d'articles"
-                                    value={maxArticles}
-                                    onChange={setMaxArticles}
-                                    min={3}
-                                    max={30}
-                                    clampBehavior="strict"
-                                />
-                                <Switch
-                                    checked={groupSimilar}
-                                    onChange={event => setGroupSimilar(event.currentTarget.checked)}
-                                    disabled={!similarityEnabled}
-                                    label="Regrouper les articles très similaires"
-                                />
-                                <Switch
-                                    checked={includeImages}
-                                    onChange={event => setIncludeImages(event.currentTarget.checked)}
-                                    label="Inclure l'image principale des articles"
-                                />
-                            </Stack>
-                        </Box>
+                        {period === "custom" && (
+                            <DateInput
+                                label="Date de début"
+                                placeholder="Choisir une date"
+                                value={customStartDate ?? null}
+                                onChange={value => setCustomStartDate(value ?? undefined)}
+                                valueFormat="DD MMMM YYYY"
+                                clearable
+                            />
+                        )}
 
                         <Group justify="flex-end">
-                            <Button leftSection={<TbCheck size={17} />} onClick={applySettings}>
-                                Appliquer la configuration
-                            </Button>
-                            <Button
-                                leftSection={<TbDownload size={17} />}
-                                onClick={downloadNewsletter}
-                                disabled={entriesLoading || !selectedEntries.length}
-                            >
-                                Télécharger la newsletter
+                            <Button rightSection={<TbArrowRight size={16} />} onClick={continueToArticleSelection}>
+                                Choisir les articles
                             </Button>
                         </Group>
                     </Stack>
-                </Grid.Col>
+                </Stepper.Step>
 
-                <Grid.Col span={{ base: 12, md: 5 }}>
-                    <Stack gap="sm" pos="sticky" top={16}>
-                        <Group justify="space-between">
-                            <Title order={4}>Aperçu</Title>
-                            <Text size="sm" c="dimmed">
-                                {frequencyLabel}
-                            </Text>
-                        </Group>
-                        <Paper withBorder p={0} radius="sm" style={{ overflow: "hidden" }}>
-                            <Box
-                                p={{ base: "md", sm: "xl" }}
-                                style={{ backgroundColor: activeTemplate.palette.surface, color: activeTemplate.palette.text }}
-                            >
-                                <Text size="xs" tt="uppercase" fw={700} style={{ color: activeTemplate.palette.accent }}>
-                                    Ayn Reader OS
+                <Stepper.Step label="Articles" description="Sélection manuelle" allowStepSelect={activeStep > 1}>
+                    <Stack gap="md">
+                        <Group justify="space-between" align="end" gap="md">
+                            <form onSubmit={submitSearch} style={{ flex: 1 }}>
+                                <TextInput
+                                    label="Rechercher dans les articles"
+                                    placeholder="Mot-clé"
+                                    value={searchInput}
+                                    onChange={event => setSearchInput(event.currentTarget.value)}
+                                    rightSection={
+                                        <Tooltip label="Rechercher">
+                                            <ActionIcon type="submit" variant="subtle" aria-label="Rechercher">
+                                                <TbSearch size={18} />
+                                            </ActionIcon>
+                                        </Tooltip>
+                                    }
+                                />
+                            </form>
+                            <Group gap="xs" align="center" pb={2}>
+                                <Text fw={600}>
+                                    {selectedEntriesList.length} sélectionné{selectedEntriesList.length > 1 ? "s" : ""}
                                 </Text>
-                                <Title order={3} mt={6} style={{ color: activeTemplate.palette.text }}>
-                                    {template === "brief" && "Les signaux IA essentiels"}
-                                    {template === "digest" && "La veille IA de la semaine"}
-                                    {template === "editorial" && "Ce qu'il faut retenir de l'IA"}
-                                    {template === "radar" && "Le radar IA par thématique"}
-                                </Title>
-                                <Text size="sm" mt="xs" style={{ color: activeTemplate.palette.text, opacity: 0.78 }}>
-                                    {frequencyLabel} · {selectedFeeds.length} sources sélectionnées
+                                <Button
+                                    size="xs"
+                                    variant="default"
+                                    leftSection={<TbChecks size={15} />}
+                                    disabled={!totalEntries || entriesLoading || selectingAllEntries}
+                                    loading={selectingAllEntries}
+                                    onClick={toggleAllEntries}
+                                >
+                                    {allEntriesSelected ? "Tout désélectionner" : "Tout sélectionner"}
+                                </Button>
+                            </Group>
+                        </Group>
+
+                        <Box style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}>
+                            {entriesLoading && (
+                                <Text c="dimmed" py="md">
+                                    Chargement des articles…
+                                </Text>
+                            )}
+                            {!entriesLoading && entries?.entries.length === 0 && (
+                                <Text c="dimmed" py="md">
+                                    Aucun article ne correspond à ce périmètre.
+                                </Text>
+                            )}
+                            {!entriesLoading &&
+                                entries?.entries.map(entry => (
+                                    <ArticleRow
+                                        key={newsletterEntryId(entry)}
+                                        entry={entry}
+                                        checked={Boolean(selectedEntries[newsletterEntryId(entry)])}
+                                        onChange={() => setSelectedEntries(current => toggleNewsletterEntry(current, entry))}
+                                    />
+                                ))}
+                        </Box>
+
+                        <Box
+                            pos="sticky"
+                            bottom={0}
+                            py="md"
+                            style={{ background: "var(--mantine-color-body)", borderTop: "1px solid var(--mantine-color-default-border)" }}
+                        >
+                            <Group justify="space-between" wrap="nowrap">
+                                <Group gap="xs" wrap="nowrap">
+                                    <Tooltip label="Page précédente">
+                                        <ActionIcon
+                                            variant="default"
+                                            aria-label="Page précédente"
+                                            disabled={page === 0 || entriesLoading}
+                                            onClick={() => setPage(current => Math.max(0, current - 1))}
+                                        >
+                                            <TbArrowLeft size={18} />
+                                        </ActionIcon>
+                                    </Tooltip>
+                                    <Text size="sm" miw={96} ta="center">
+                                        Page {page + 1} sur {totalPages}
+                                    </Text>
+                                    <Tooltip label="Page suivante">
+                                        <ActionIcon
+                                            variant="default"
+                                            aria-label="Page suivante"
+                                            disabled={!entries?.hasMore || entriesLoading}
+                                            onClick={() => setPage(current => current + 1)}
+                                        >
+                                            <TbArrowRight size={18} />
+                                        </ActionIcon>
+                                    </Tooltip>
+                                </Group>
+                                <Button
+                                    rightSection={<TbArrowRight size={16} />}
+                                    disabled={!selectedEntriesList.length}
+                                    onClick={continueToPreview}
+                                >
+                                    Continuer
+                                </Button>
+                            </Group>
+                        </Box>
+                    </Stack>
+                </Stepper.Step>
+
+                <Stepper.Step label="Rendu" description="Aperçu et téléchargement" allowStepSelect={false}>
+                    <Stack gap="lg">
+                        <TextInput label="Titre" value={title} onChange={event => setTitle(event.currentTarget.value)} required />
+
+                        <Group justify="space-between" align="center" gap="md">
+                            <Box>
+                                <Text size="sm" fw={500}>
+                                    Design
+                                </Text>
+                                <Text size="sm" c="dimmed">
+                                    {templateOptions.find(option => option.id === template)?.name}
                                 </Text>
                             </Box>
-                            <Stack gap="md" p={{ base: "md", sm: "xl" }} style={{ backgroundColor: activeTemplate.palette.canvas }}>
-                                <Text size="sm" fw={700} style={{ color: activeTemplate.palette.surface }}>
-                                    À retenir cette période
-                                </Text>
-                                <Text size="sm" style={{ color: activeTemplate.palette.surface }}>
-                                    Jusqu'à {articleCount} articles sélectionnés depuis {selectedFeeds.length} source(s)
-                                    {similarityEnabled
-                                        ? `, regroupés au seuil de ${(similarity / 100).toFixed(2)}.`
-                                        : ", sans déduplication par similarité."}
-                                </Text>
-                                {includeImages && <Box h={74} style={{ backgroundColor: activeTemplate.palette.accent }} />}
-                                <Divider />
-                                <Text size="sm" fw={700} style={{ color: activeTemplate.palette.surface }}>
-                                    {template === "editorial" ? "À lire en priorité" : "Sources retenues"}
-                                </Text>
-                                <Group gap={6}>
-                                    {selectedFeedNames.slice(0, 5).map(name => (
-                                        <Badge
-                                            key={name}
-                                            variant="outline"
-                                            style={{ borderColor: activeTemplate.palette.accent, color: activeTemplate.palette.surface }}
-                                        >
-                                            {name}
-                                        </Badge>
-                                    ))}
-                                    {selectedFeedNames.length > 5 && (
-                                        <Badge
-                                            variant="outline"
-                                            style={{ borderColor: activeTemplate.palette.accent, color: activeTemplate.palette.surface }}
-                                        >
-                                            +{selectedFeedNames.length - 5}
-                                        </Badge>
-                                    )}
-                                </Group>
-                                <Text size="xs" c="dimmed">
-                                    {selectedCategoryNames.length ? selectedCategoryNames.join(" · ") : "Aucune catégorie sélectionnée"}
-                                </Text>
-                            </Stack>
-                        </Paper>
-                        <Text size="xs" c="dimmed">
-                            Le fichier téléchargé contient les articles actuellement retenus.
-                        </Text>
+                            <Group gap="xs">
+                                {templateOptions.map(option => (
+                                    <Tooltip key={option.id} label={option.name}>
+                                        <UnstyledButton
+                                            aria-label={option.name}
+                                            onClick={() => selectTemplate(option.id)}
+                                            style={{
+                                                width: 32,
+                                                height: 32,
+                                                background: option.accent,
+                                                border:
+                                                    template === option.id
+                                                        ? "3px solid var(--mantine-color-text)"
+                                                        : "1px solid transparent",
+                                            }}
+                                        />
+                                    </Tooltip>
+                                ))}
+                            </Group>
+                        </Group>
+
+                        <Switch
+                            label="Afficher l'image principale des articles"
+                            checked={includeImages}
+                            onChange={event => selectImages(event.currentTarget.checked)}
+                        />
+
+                        <Divider />
+
+                        <Box
+                            style={{
+                                border: "1px solid var(--mantine-color-default-border)",
+                                borderRadius: 4,
+                                overflow: "hidden",
+                            }}
+                        >
+                            <iframe
+                                title="Aperçu de la newsletter"
+                                srcDoc={newsletterHtml}
+                                sandbox=""
+                                style={{ width: "100%", height: 680, border: 0, display: "block" }}
+                            />
+                        </Box>
+
+                        <Box
+                            pos="sticky"
+                            bottom={0}
+                            py="md"
+                            style={{ background: "var(--mantine-color-body)", borderTop: "1px solid var(--mantine-color-default-border)" }}
+                        >
+                            <Group justify="space-between">
+                                <Button variant="default" leftSection={<TbArrowLeft size={16} />} onClick={() => setActiveStep(1)}>
+                                    Articles
+                                </Button>
+                                <Button
+                                    leftSection={<TbDownload size={16} />}
+                                    disabled={!selectedEntriesList.length || !title.trim()}
+                                    onClick={downloadNewsletter}
+                                >
+                                    Télécharger la newsletter (.html)
+                                </Button>
+                            </Group>
+                        </Box>
                     </Stack>
-                </Grid.Col>
-            </Grid>
+                </Stepper.Step>
+            </Stepper>
         </Box>
     )
+}
+
+function ArticleRow({ entry, checked, onChange }: { entry: Entry; checked: boolean; onChange: () => void }) {
+    return (
+        <Group align="flex-start" wrap="nowrap" gap="sm" py="md" style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}>
+            <Checkbox checked={checked} onChange={onChange} aria-label={`Inclure ${entry.title}`} mt={3} />
+            <Box style={{ flex: 1, minWidth: 0 }}>
+                <Text fw={600} lineClamp={2}>
+                    {entry.title}
+                </Text>
+                <Text size="sm" c="dimmed" mt={2}>
+                    {entry.feedName} · {formatEntryDate(entry.date)}
+                </Text>
+                <Text size="sm" c="dimmed" lineClamp={2} mt={4}>
+                    {newsletterEntryExcerpt(entry)}
+                </Text>
+            </Box>
+        </Group>
+    )
+}
+
+function newsletterPeriod(value?: string): NewsletterPeriod {
+    return value === "today" || value === "week" || value === "month" || value === "custom" ? value : "week"
+}
+
+function defaultNewsletterTitle() {
+    return `Veille du ${new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(new Date())}`
+}
+
+function formatEntryDate(timestamp: number) {
+    return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(timestamp))
 }
