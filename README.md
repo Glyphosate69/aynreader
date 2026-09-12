@@ -18,6 +18,12 @@
 
 ![AynReader OS - lecture et organisation de la veille](docs/images/reader-overview.jpg)
 
+## Origine du projet
+
+AynReader OS est une adaptation de [CommaFeed](https://github.com/Athou/commafeed), un lecteur RSS auto-heberge et open source distribue sous licence Apache-2.0. AynReader conserve cette base technique et la prolonge avec son identite visuelle, un scraper integre pour les pages sans RSS, le decodage des liens Google News, l'affichage des favicons des medias et la creation de newsletters HTML.
+
+Merci au projet CommaFeed et a ses contributeurs pour la base open source sur laquelle AynReader s'appuie.
+
 ## Pourquoi AynReader OS ?
 
 AynReader OS reunit dans une seule interface les gestes essentiels de la veille : suivre des flux RSS, classer les sources par categorie, lire et garder les articles utiles, creer des sources depuis des pages sans flux RSS, puis produire une newsletter HTML a telecharger.
