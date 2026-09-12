@@ -16,7 +16,7 @@
   <a href="#creer-une-newsletter">Newsletter</a>
 </p>
 
-![AynReader OS - lecture et organisation de la veille](docs/images/reader-overview.png)
+![AynReader OS - lecture et organisation de la veille](docs/images/reader-overview.jpg)
 
 ## Pourquoi AynReader OS ?
 
