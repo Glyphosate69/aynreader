@@ -1,10 +1,6 @@
-<table align="center">
-  <tr>
-    <td align="center" bgcolor="#ffffff">
-      <img src="aynreader-client/src/assets/ayn/logo-text-data.svg" alt="AynReader OS" width="360">
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="aynreader-client/src/assets/ayn/logo-text-data-white.svg" alt="AynReader OS" width="360">
+</p>
 
 <p align="center">
   Un outil de veille auto-heberge pour suivre l'information, organiser ses sources et produire une newsletter.
