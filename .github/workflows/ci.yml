@@ -46,6 +46,12 @@ jobs:
         if: matrix.os == 'ubuntu-22.04-arm' && !github.event.repository.private
         run: echo "QUARKUS_NATIVE_NATIVE_IMAGE_XMX=10g" >> "$GITHUB_ENV"
 
+      - name: Configure Windows MySQL native build
+        if: matrix.os == 'windows-latest' && matrix.database == 'mysql'
+        run: |
+          echo "QUARKUS_NATIVE_NATIVE_IMAGE_XMX=10g" >> "$GITHUB_ENV"
+          echo "QUARKUS_NATIVE_ADDITIONAL_BUILD_ARGS_APPEND=-H:DeadlockWatchdogInterval=30" >> "$GITHUB_ENV"
+
       - name: Install Playwright dependencies
         run: sudo apt-get install -y libgbm1
         if: matrix.os != 'windows-latest'

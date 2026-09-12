@@ -260,6 +260,17 @@ class FeedIT extends BaseIT {
         void favicon() throws IOException {
             Long subscriptionId = subscribeAndWaitForEntries(getFeedUrl());
 
+            Awaitility.await()
+                    .atMost(Duration.ofSeconds(15))
+                    .until(
+                            () ->
+                                    RestAssured.given()
+                                            .get("rest/feed/favicon/{id}", subscriptionId)
+                                            .then()
+                                            .extract()
+                                            .statusCode(),
+                            statusCode -> statusCode == HttpStatus.SC_OK);
+
             byte[] icon =
                     RestAssured.given()
                             .get("rest/feed/favicon/{id}", subscriptionId)
