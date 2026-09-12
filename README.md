@@ -1,118 +1,156 @@
 <p align="center">
-  <img src="logo_text.svg" alt="AynReader OS" width="360">
+  <img src="aynreader-client/src/assets/ayn/logo-text-encre.svg" alt="AynReader OS" width="360">
 </p>
 
-# AynReader OS
+<p align="center">
+  Un outil de veille auto-heberge pour suivre l'information, organiser ses sources et produire une newsletter.
+</p>
 
-AynReader OS est un outil de veille auto-heberge pour suivre des sources, garder les articles utiles et produire une newsletter a partir de sa selection.
+<p align="center">
+  <a href="./actions/workflows/ci.yml">Verification continue</a>
+  &nbsp;&middot;&nbsp;
+  <a href="#demarrage-rapide">Demarrage rapide</a>
+  &nbsp;&middot;&nbsp;
+  <a href="#creer-une-source-depuis-une-page-sans-rss">Scraper</a>
+  &nbsp;&middot;&nbsp;
+  <a href="#creer-une-newsletter">Newsletter</a>
+</p>
 
-Il reunit la lecture RSS, l'ajout de pages web par scraper, le decodage des liens Google News et la creation de newsletters dans une meme interface.
+![AynReader OS - lecture et organisation de la veille](docs/images/reader-overview.png)
 
-## Points forts de cette version
+## Pourquoi AynReader OS ?
 
-- **Creer un flux RSS pour une page sans RSS.** Le scraper integre transforme une page d'actualites en source suivie. Selectionne une carte dans la page et AynReader repere les cartes similaires, puis propose les selectors a corriger si besoin.
-- **Deux modes de configuration.** Utilise la detection automatique pour aller vite, ou renseigne directement les selectors CSS du titre, de la description, de l'URL, de l'image et de la date pour garder la main sur l'extraction.
-- **Liens Google News exploitables.** AynReader retrouve l'URL de l'editeur, ouvre l'article original et affiche son domaine ainsi que son favicon lorsqu'il est disponible.
-- **Newsletter editoriale telechargeable.** Choisis les categories et la periode, selectionne les articles sur plusieurs pages, personnalise le titre et le design, puis telecharge un vrai fichier HTML.
+AynReader OS reunit dans une seule interface les gestes essentiels de la veille : suivre des flux RSS, classer les sources par categorie, lire et garder les articles utiles, creer des sources depuis des pages sans flux RSS, puis produire une newsletter HTML a telecharger.
 
-## Fonctionnalites essentielles
+Il est pense pour les veilleurs, les analystes, les communicants et toute personne qui veut garder une vue claire sur plusieurs sujets sans dependre d'un service tiers.
 
-- Lecture des flux RSS et Atom, avec organisation par categories et import/export OPML.
-- Lecture confortable sur ordinateur et mobile, en mode clair ou sombre.
-- Suivi des articles lus, favoris, recherche et plusieurs modes de lecture.
+### Ce que vous pouvez faire
 
-## Lire et organiser sa veille
+| Fonction | Ce que cela apporte |
+| --- | --- |
+| Lire des flux RSS et Atom | Centraliser les actualites de vos sites, blogs et medias. |
+| Organiser par categories | Separer vos sujets de veille et retrouver rapidement une source. |
+| Creer un flux depuis une page web | Suivre une page d'actualites qui ne propose pas de RSS. |
+| Decoder les liens Google News | Ouvrir l'article chez son editeur et afficher son domaine. |
+| Recuperer les favicons | Identifier plus facilement le media a l'origine d'un article. |
+| Composer une newsletter | Choisir les articles, adapter le titre et le design, puis telecharger un fichier HTML. |
 
-Les sources restent regroupees par categorie. La colonne de gauche sert a passer d'un sujet ou d'une source a l'autre, tandis que la liste centrale garde les articles lisibles et faciles a parcourir.
+## Demarrage rapide
 
-![Vue de lecture d'AynReader OS](docs/images/reader-overview.png)
+### 1. Installer les prerequis
 
-## Creer un flux RSS depuis une page sans RSS
+Pour lancer AynReader depuis le code source, installez :
 
-Le scraper transforme une page d'actualites qui ne propose pas de flux RSS en une source suivie dans AynReader.
-
-1. Ajoute l'URL de la page et charge-la dans l'outil.
-2. Clique sur une carte d'actualite dans l'apercu.
-3. AynReader cherche les elements semblables et propose les selectors.
-4. Verifie ou modifie les selectors, puis cree la source.
-
-La demonstration ci-dessous montre le parcours complet : charger la page, selectionner une carte et obtenir les selectors proposes.
-
-![Demonstration du scraper integre](docs/images/scraper-demo.gif)
-
-Le mode `Selectors manuels` reste disponible lorsque tu connais deja la structure de la page ou que la detection automatique ne donne pas le bon resultat. Renseigne les selectors de la carte et de ses champs, puis lance le test avant de creer la source.
-
-![Demonstration des selectors manuels](docs/images/manual-selectors-demo.gif)
-
-## Composer une newsletter
-
-La newsletter suit un parcours editorial : choisir les categories et la periode, selectionner les articles, puis ajuster le titre et le design avant de telecharger le fichier HTML. Le rendu est construit uniquement avec les articles choisis.
-
-![Demonstration de la newsletter](docs/images/newsletter-demo.gif)
-
-## Demarrage en developpement
-
-### Prerequis
-
-- Java 25 ou une version compatible avec le `pom.xml`.
+- Java 25.
 - Node.js 24 et npm.
-- Un navigateur recent.
+- Git.
 
-### Installation
+### 2. Recuperer le projet
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/<organisation-ou-compte>/aynreader.git
 cd aynreader
-cd aynreader-client
-npm ci
-cd ..
 ```
 
-### Lancer AynReader OS
+### 3. Lancer AynReader
 
-Ouvre deux terminaux.
+Ouvrez deux terminaux dans le dossier du projet.
 
-Dans le premier, lance le backend :
+Dans le premier, lancez le serveur AynReader :
 
 ```bash
 ./mvnw -pl aynreader-server quarkus:dev -DskipTests
 ```
 
-Dans le second, lance le frontend et le scraper :
+Dans le second, lancez l'interface et le scraper :
 
 ```bash
 cd aynreader-client
+npm ci
 npm run dev:all
 ```
 
-Ouvre ensuite [http://localhost:8082](http://localhost:8082). Lors de la premiere ouverture, l'assistant cree le compte administrateur.
+Ouvrez ensuite [http://localhost:8082](http://localhost:8082). Lors de la premiere ouverture, l'assistant vous invite a creer le compte administrateur.
 
-En developpement, le backend ecoute sur `http://localhost:8083` et le scraper sur `http://localhost:3000`.
+> En developpement, le serveur AynReader utilise le port `8083`, l'interface le port `8082` et le scraper local le port `3000`.
 
-## Ajouter une source
+## Votre premiere veille
 
-### Flux RSS ou Atom
+1. Creez une categorie, par exemple `Intelligence artificielle`, `Concurrents` ou `Reglementation`.
+2. Cliquez sur le bouton `+` dans la barre superieure.
+3. Collez l'URL d'un flux RSS ou Atom.
+4. Choisissez la categorie, puis ajoutez la source.
+5. Ouvrez la source dans la colonne de gauche pour lire les articles recuperes.
 
-1. Ouvre l'ajout de source.
-2. Colle l'URL du flux.
-3. Choisis la categorie puis valide.
+Vous pouvez creer autant de categories et de sources que necessaire. Les favoris permettent de conserver les articles a relire ou a reutiliser.
 
-### Creer un flux RSS avec le scraper
+## Creer une source depuis une page sans RSS
 
-1. Ouvre l'ajout de source puis l'onglet `Scrap`.
-2. Choisis `Detection automatique` pour selectionner une carte d'actualite dans l'apercu, ou `Selectors manuels` pour renseigner directement la regle.
-3. Controle les selectors du titre, de la description, de l'URL, de l'image et de la date. La description et l'image sont facultatives.
-4. Lance le test des selectors modifies, puis cree la source.
+Certaines pages d'actualites ne publient pas de flux RSS. AynReader peut les suivre grace a son scraper integre : il lit la page et cree une source a partir des cartes d'actualites qui s'y repetent.
 
-Un selector de carte doit decrire une seule carte representative. AynReader remonte ensuite dans sa hierarchie pour trouver le niveau qui se repete et en deduit la liste des actualites.
+### Detection automatique
 
-## Liens Google News
+1. Ouvrez l'ajout de source, puis l'onglet `Scrap`.
+2. Choisissez `Detection automatique`.
+3. Collez l'URL de la page d'actualites et cliquez sur `Load`.
+4. Cliquez sur une seule carte d'actualite representative dans l'apercu.
+5. Cliquez sur `Detect elements`.
+6. Verifiez les selectors proposes pour le titre, la description, l'image, l'URL et la date.
+7. Testez les selectors modifies, puis creez la source.
 
-Lorsqu'une entree contient un lien `news.google.com`, AynReader essaie de retrouver l'URL de l'article original pendant l'actualisation. La lecture ouvre alors directement le site editeur et affiche son domaine et son favicon lorsque celui-ci est disponible.
+Le scraper part d'une carte unique et recherche son niveau repetitif dans la page pour trouver les autres actualites.
+
+![Demonstration de la detection automatique du scraper](docs/images/scraper-demo.gif)
+
+### Selectors manuels
+
+Lorsque vous connaissez deja la structure d'une page, choisissez `Selectors manuels`. Renseignez le selector de la carte et, si necessaire, ceux de ses champs : titre, description, image, URL et date.
+
+La description et l'image sont facultatives. Utilisez le bouton de test avant de creer la source afin de controler les articles qui seront recuperes.
+
+![Demonstration des selectors manuels](docs/images/manual-selectors-demo.gif)
+
+### Si une page ne se charge pas
+
+Certains sites bloquent les navigateurs automatises, demandent une connexion ou rendent leurs actualites uniquement avec JavaScript. Dans ce cas, AynReader ne peut pas toujours lire la page. Cherchez d'abord un flux RSS officiel ; sinon, essayez une page publique plus directe ou le mode manuel si le contenu est visible dans l'apercu.
+
+## Liens Google News et favicon du media
+
+Les flux Google News redirigent souvent vers une URL technique. Lors de l'actualisation, AynReader essaie de retrouver le lien de l'editeur. La liste d'articles affiche alors le domaine du media et son favicon quand il est disponible.
+
+Vous ouvrez ainsi l'article original, plutot que la redirection Google News.
+
+## Creer une newsletter
+
+La newsletter est un parcours en trois etapes : definir le perimetre, choisir les articles, puis telecharger le rendu.
+
+1. Ouvrez `Newsletter` dans le menu.
+2. Selectionnez les categories et la periode : dernieres 24 h, 7 jours, 30 jours ou une date de depart.
+3. Recherchez et cochez les articles a inclure. La selection reste conservee lorsque vous changez de page.
+4. Choisissez `Continuer`.
+5. Modifiez le titre si besoin, choisissez l'un des quatre designs et activez ou non les images principales.
+6. Cliquez sur `Telecharger la newsletter (.html)`.
+
+Le fichier telecharge est une vraie newsletter HTML composee uniquement avec les articles que vous avez selectionnes.
+
+![Demonstration de la creation d'une newsletter](docs/images/newsletter-demo.gif)
+
+## Conseils d'utilisation
+
+- Utilisez une categorie par sujet de veille : elle sert aussi a definir le perimetre de la newsletter.
+- Pour un scraper, selectionnez une vraie carte d'actualite, pas le conteneur general de toute la page.
+- Lorsque la detection est presque bonne, corrigez simplement le champ en erreur dans le formulaire puis testez a nouveau les selectors.
+- Une source RSS peut fournir des articles anciens lors de son premier ajout : filtrez la newsletter par periode de publication pour ne garder que les elements utiles.
 
 ## Developpement et tests
 
-Commandes frontend :
+Commandes pour verifier le projet avant une contribution :
+
+```bash
+./mvnw --batch-mode --no-transfer-progress verify -Ph2
+```
+
+Commandes frontend utiles :
 
 ```bash
 cd aynreader-client
@@ -121,26 +159,19 @@ npm run test:ci
 npm run build
 ```
 
-Commandes backend :
+### Configuration du scraper local
 
-```bash
-./mvnw -pl aynreader-server test
-./mvnw -pl aynreader-server verify
-```
-
-## Configuration du scraper
-
-Le scraper local accepte les variables suivantes :
-
-- `SCRAPER_PORT` : port du service, `3000` par defaut.
-- `SCRAPER_TIMEOUT_MS` : delai maximum de chargement d'une page.
-- `SCRAPER_PROXY_URL` : proxy reseau facultatif.
-- `VITE_SCRAPER_API_BASE` : adresse du service utilisee par le frontend.
+| Variable | Role |
+| --- | --- |
+| `SCRAPER_PORT` | Port du service scraper. La valeur par defaut est `3000`. |
+| `SCRAPER_TIMEOUT_MS` | Delai maximum de chargement d'une page. |
+| `SCRAPER_PROXY_URL` | Proxy reseau facultatif. |
+| `VITE_SCRAPER_API_BASE` | Adresse du scraper utilisee par l'interface. |
 
 ## Securite
 
-Pour signaler une vulnerabilite qui ne doit pas etre exposee dans une issue publique, utilise une private security advisory depuis l'onglet Security du depot.
+Pour signaler une vulnerabilite sans ouvrir une issue publique, utilisez une private security advisory depuis l'onglet `Security` du depot.
 
 ## Licence
 
-AynReader OS est distribue sous licence Apache 2.0. Consulte le fichier [LICENSE](LICENSE) avant toute redistribution.
+AynReader OS est distribue sous licence [Apache 2.0](LICENSE).
