@@ -15,6 +15,7 @@ jobs:
     if: github.event_name != 'pull_request' || github.actor != 'renovate[bot]' # renovate already triggers the build on pushes
 
     strategy:
+      fail-fast: false
       matrix:
         os: [ "ubuntu-latest", "ubuntu-22.04-arm", "windows-latest" ]
         database: [ "h2", "postgresql", "mysql", "mariadb" ]
@@ -40,6 +41,10 @@ jobs:
         with:
           cache: "npm"
           cache-dependency-path: 'aynreader-client/package-lock.json'
+
+      - name: Limit native image heap on Linux ARM
+        if: matrix.os == 'ubuntu-22.04-arm'
+        run: echo "QUARKUS_NATIVE_NATIVE_IMAGE_XMX=5g" >> "$GITHUB_ENV"
 
       - name: Install Playwright dependencies
         run: sudo apt-get install -y libgbm1
