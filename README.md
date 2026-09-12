@@ -41,28 +41,43 @@ Il est pense pour les veilleurs, les analystes, les communicants et toute person
 | Recuperer les favicons | Identifier plus facilement le media a l'origine d'un article. |
 | Composer une newsletter | Choisir les articles, adapter le titre et le design, puis telecharger un fichier HTML. |
 
-## Demarrage rapide
+## Demarrage
 
-### 1. Installer les prerequis
+Installez d'abord Java 25, Node.js 24 avec npm et Git. Choisissez ensuite le guide correspondant a votre systeme.
 
-Pour lancer AynReader depuis le code source, installez :
+### macOS
 
-- Java 25.
-- Node.js 24 et npm.
-- Git.
-
-### 2. Recuperer le projet
+Ouvrez l'application Terminal, puis recuperez le projet :
 
 ```bash
 git clone https://github.com/Glyphosate69/aynreader.git
 cd aynreader
 ```
 
-### 3. Lancer AynReader
+Ouvrez deux fenetres Terminal dans ce dossier. Dans la premiere, lancez le serveur :
 
-Ouvrez deux terminaux dans le dossier du projet.
+```bash
+./mvnw -pl aynreader-server quarkus:dev -DskipTests
+```
 
-Dans le premier, lancez le serveur AynReader :
+Dans la seconde, lancez l'interface et le scraper :
+
+```bash
+cd aynreader-client
+npm ci
+npm run dev:all
+```
+
+### Linux
+
+Dans votre terminal, recuperez le projet :
+
+```bash
+git clone https://github.com/Glyphosate69/aynreader.git
+cd aynreader
+```
+
+Ouvrez deux terminaux dans ce dossier. Dans le premier, lancez le serveur :
 
 ```bash
 ./mvnw -pl aynreader-server quarkus:dev -DskipTests
@@ -76,7 +91,39 @@ npm ci
 npm run dev:all
 ```
 
-Ouvrez ensuite [http://localhost:8082](http://localhost:8082). Lors de la premiere ouverture, l'assistant vous invite a creer le compte administrateur.
+### Windows
+
+Ouvrez Windows PowerShell, puis recuperez le projet :
+
+```powershell
+git clone https://github.com/Glyphosate69/aynreader.git
+cd aynreader
+```
+
+Ouvrez trois fenetres PowerShell dans ce dossier. Dans la premiere, lancez le serveur :
+
+```powershell
+.\mvnw.cmd -pl aynreader-server quarkus:dev -DskipTests
+```
+
+Dans la seconde, installez les dependances puis lancez le scraper :
+
+```powershell
+cd aynreader-client
+npm ci
+npm run scraper:dev
+```
+
+Dans la troisieme, lancez l'interface :
+
+```powershell
+cd aynreader-client
+npm run dev
+```
+
+### Ouvrir AynReader
+
+Sur les trois systemes, ouvrez [http://localhost:8082](http://localhost:8082). Lors de la premiere ouverture, l'assistant vous invite a creer le compte administrateur.
 
 > En developpement, le serveur AynReader utilise le port `8083`, l'interface le port `8082` et le scraper local le port `3000`.
 
