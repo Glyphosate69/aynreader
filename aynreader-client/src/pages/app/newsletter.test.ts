@@ -137,6 +137,27 @@ describe("newsletter", () => {
         ).not.toThrow()
     })
 
+    it("decodes HTML entities in newsletter text", () => {
+        const entryWithEncodedText = {
+            ...entries[0],
+            title: "Réunion à 9&amp;nbsp;h&amp;nbsp;30",
+            mediaDescription: "Avec l’ordre du jour suivant&amp;nbsp;:",
+        }
+
+        expect(newsletterEntryExcerpt(entryWithEncodedText)).toBe("Avec l’ordre du jour suivant :")
+
+        const html = buildNewsletter({
+            entries: [entryWithEncodedText],
+            template: "digest",
+            includeImages: false,
+            generatedAt: new Date("2026-08-26T10:00:00Z"),
+            title: "Veille IA",
+        })
+
+        expect(html).toContain("Réunion à 9 h 30")
+        expect(html).not.toContain("&amp;nbsp;")
+    })
+
     it("calculates the visible number of newsletter pages", () => {
         expect(getNewsletterPageCount(51, 25)).toBe(3)
         expect(getNewsletterPageCount(0, 25)).toBe(1)

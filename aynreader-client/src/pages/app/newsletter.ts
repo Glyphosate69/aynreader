@@ -96,10 +96,12 @@ export function buildNewsletter(document: NewsletterDocument) {
         .map(entry => {
             const image = document.includeImages && (entry.mediaThumbnailUrl || entry.enclosureUrl)
             const description = newsletterEntryExcerpt(entry)
+            const feedName = plainText(entry.feedName)
+            const title = plainText(entry.title)
             return `<article class="article">
                 ${image ? `<img class="image" src="${escapeHtml(image)}" alt="" />` : ""}
-                <p class="meta">${escapeHtml(entry.feedName)} · ${formatDate(entry.date)}</p>
-                <h2><a href="${escapeHtml(entry.url)}">${escapeHtml(entry.title)}</a></h2>
+                <p class="meta">${escapeHtml(feedName)} · ${formatDate(entry.date)}</p>
+                <h2><a href="${escapeHtml(entry.url)}">${escapeHtml(title)}</a></h2>
                 ${description ? `<p class="description">${escapeHtml(description)}</p>` : ""}
             </article>`
         })
@@ -151,7 +153,16 @@ function normalizedIds(ids: string[]) {
 }
 
 function plainText(value?: string | null) {
-    return (value ?? "")
+    let decoded = value ?? ""
+    for (let index = 0; index < 2; index += 1) {
+        const decoder = document.createElement("textarea")
+        decoder.innerHTML = decoded
+        const next = decoder.value
+        if (next === decoded) break
+        decoded = next
+    }
+
+    return decoded
         .replace(/<[^>]*>/g, " ")
         .replace(/\s+/g, " ")
         .trim()
