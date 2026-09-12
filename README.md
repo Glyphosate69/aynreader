@@ -100,7 +100,7 @@ Certaines pages d'actualites ne publient pas de flux RSS. AynReader peut les sui
 
 Le scraper part d'une carte unique et recherche son niveau repetitif dans la page pour trouver les autres actualites.
 
-![Demonstration de la detection automatique du scraper](docs/images/scraper-demo.gif)
+![Detection automatique du scraper](docs/images/scraper-detection.jpg)
 
 ### Selectors manuels
 
@@ -108,7 +108,7 @@ Lorsque vous connaissez deja la structure d'une page, choisissez `Selectors manu
 
 La description et l'image sont facultatives. Utilisez le bouton de test avant de creer la source afin de controler les articles qui seront recuperes.
 
-![Demonstration des selectors manuels](docs/images/manual-selectors-demo.gif)
+![Formulaire des selectors manuels](docs/images/manual-selectors.jpg)
 
 ### Si une page ne se charge pas
 
@@ -133,7 +133,7 @@ La newsletter est un parcours en trois etapes : definir le perimetre, choisir le
 
 Le fichier telecharge est une vraie newsletter HTML composee uniquement avec les articles que vous avez selectionnes.
 
-![Demonstration de la creation d'une newsletter](docs/images/newsletter-demo.gif)
+![Exemple de newsletter generee](docs/images/newsletter-workflow.jpg)
 
 ## Conseils d'utilisation
 
