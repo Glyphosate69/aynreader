@@ -42,17 +42,22 @@ jobs:
           cache: "npm"
           cache-dependency-path: 'aynreader-client/package-lock.json'
 
-      - name: Limit native image heap on Linux ARM
-        if: matrix.os == 'ubuntu-22.04-arm'
-        run: echo "QUARKUS_NATIVE_NATIVE_IMAGE_XMX=5g" >> "$GITHUB_ENV"
+      - name: Configure native image heap on public Linux ARM
+        if: matrix.os == 'ubuntu-22.04-arm' && !github.event.repository.private
+        run: echo "QUARKUS_NATIVE_NATIVE_IMAGE_XMX=10g" >> "$GITHUB_ENV"
 
       - name: Install Playwright dependencies
         run: sudo apt-get install -y libgbm1
         if: matrix.os != 'windows-latest'
 
       # Build & Test
-      - name: Build with Maven
+      - name: Build native application
+        if: matrix.os != 'ubuntu-22.04-arm' || !github.event.repository.private
         run: mvn --batch-mode --no-transfer-progress install -Pnative -P${{ matrix.database }} -DskipTests=${{ matrix.os == 'windows-latest' && matrix.database != 'h2' }}
+
+      - name: Build JVM application on private Linux ARM
+        if: matrix.os == 'ubuntu-22.04-arm' && github.event.repository.private
+        run: mvn --batch-mode --no-transfer-progress install -P${{ matrix.database }}
 
       # Build pages
       - name: Create pages directory structure
@@ -86,6 +91,7 @@ jobs:
 
       - name: Upload native executable
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: matrix.os != 'ubuntu-22.04-arm' || !github.event.repository.private
         with:
           name: aynreader-${{ matrix.database }}-${{ runner.os }}-${{ runner.arch }}
           path: aynreader-server/target/aynreader-*-runner*
@@ -149,7 +155,7 @@ jobs:
           context: .
           file: aynreader-server/src/main/docker/Dockerfile.native
           push: false
-          platforms: linux/amd64,linux/arm64/v8
+          platforms: ${{ github.event.repository.private && 'linux/amd64' || 'linux/amd64,linux/arm64/v8' }}
 
       - name: Docker build - jvm
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
