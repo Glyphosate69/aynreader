@@ -121,6 +121,7 @@ export interface GetEntriesRequest {
     id: string
     readType?: ReadingMode
     newerThan?: number
+    publishedAfter?: number
     order?: ReadingOrder
     keywords?: string
     excludedSubscriptionIds?: string

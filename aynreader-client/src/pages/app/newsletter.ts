@@ -70,6 +70,10 @@ export function getNewsletterStartDate(period: NewsletterPeriod, customStartDate
         return new Date(`${customStartDate}T00:00:00Z`).getTime()
     }
 
+    if (period === "today") {
+        return now.getTime() - 24 * 60 * 60 * 1000
+    }
+
     const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
     if (period === "week") start.setUTCDate(start.getUTCDate() - 7)
     if (period === "month") start.setUTCDate(start.getUTCDate() - 30)

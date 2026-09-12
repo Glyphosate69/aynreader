@@ -97,6 +97,18 @@ public class FeedEntryStatusDAO extends GenericDAO<FeedEntryStatus> {
             int limit,
             ReadingOrder order,
             boolean includeContent) {
+        return findStarred(user, keywords, newerThan, null, offset, limit, order, includeContent);
+    }
+
+    public List<FeedEntryStatus> findStarred(
+            User user,
+            List<FeedEntryKeyword> keywords,
+            Instant newerThan,
+            Instant publishedAfter,
+            int offset,
+            int limit,
+            ReadingOrder order,
+            boolean includeContent) {
         JPAQuery<FeedEntryStatus> query =
                 query().selectFrom(STATUS).where(STATUS.user.eq(user), STATUS.starred.isTrue());
         if (includeContent || CollectionUtils.isNotEmpty(keywords)) {
@@ -110,6 +122,10 @@ public class FeedEntryStatusDAO extends GenericDAO<FeedEntryStatus> {
 
         if (newerThan != null) {
             query.where(STATUS.entryInserted.gt(newerThan));
+        }
+
+        if (publishedAfter != null) {
+            query.where(STATUS.entryPublished.goe(publishedAfter));
         }
 
         if (order == ReadingOrder.ASC) {
@@ -138,6 +154,11 @@ public class FeedEntryStatusDAO extends GenericDAO<FeedEntryStatus> {
     }
 
     public long countStarred(User user, List<FeedEntryKeyword> keywords, Instant newerThan) {
+        return countStarred(user, keywords, newerThan, null);
+    }
+
+    public long countStarred(
+            User user, List<FeedEntryKeyword> keywords, Instant newerThan, Instant publishedAfter) {
         JPAQuery<Long> query =
                 query().select(STATUS.id.count())
                         .from(STATUS)
@@ -153,6 +174,10 @@ public class FeedEntryStatusDAO extends GenericDAO<FeedEntryStatus> {
             query.where(STATUS.entryInserted.gt(newerThan));
         }
 
+        if (publishedAfter != null) {
+            query.where(STATUS.entryPublished.goe(publishedAfter));
+        }
+
         setTimeout(query, config.database().queryTimeout());
 
         Long count = query.fetchOne();
@@ -165,6 +190,36 @@ public class FeedEntryStatusDAO extends GenericDAO<FeedEntryStatus> {
             boolean unreadOnly,
             List<FeedEntryKeyword> keywords,
             Instant newerThan,
+            int offset,
+            int limit,
+            ReadingOrder order,
+            boolean includeContent,
+            String tag,
+            Long minEntryId,
+            Long maxEntryId) {
+        return findBySubscriptions(
+                user,
+                subs,
+                unreadOnly,
+                keywords,
+                newerThan,
+                null,
+                offset,
+                limit,
+                order,
+                includeContent,
+                tag,
+                minEntryId,
+                maxEntryId);
+    }
+
+    public List<FeedEntryStatus> findBySubscriptions(
+            User user,
+            List<FeedSubscription> subs,
+            boolean unreadOnly,
+            List<FeedEntryKeyword> keywords,
+            Instant newerThan,
+            Instant publishedAfter,
             int offset,
             int limit,
             ReadingOrder order,
@@ -200,6 +255,10 @@ public class FeedEntryStatusDAO extends GenericDAO<FeedEntryStatus> {
 
         if (newerThan != null) {
             query.where(ENTRY.inserted.goe(newerThan));
+        }
+
+        if (publishedAfter != null) {
+            query.where(ENTRY.published.goe(publishedAfter));
         }
 
         if (minEntryId != null) {
@@ -252,6 +311,17 @@ public class FeedEntryStatusDAO extends GenericDAO<FeedEntryStatus> {
             List<FeedEntryKeyword> keywords,
             Instant newerThan,
             String tag) {
+        return countBySubscriptions(user, subs, unreadOnly, keywords, newerThan, null, tag);
+    }
+
+    public long countBySubscriptions(
+            User user,
+            List<FeedSubscription> subs,
+            boolean unreadOnly,
+            List<FeedEntryKeyword> keywords,
+            Instant newerThan,
+            Instant publishedAfter,
+            String tag) {
         if (subs.isEmpty()) {
             return 0;
         }
@@ -280,6 +350,10 @@ public class FeedEntryStatusDAO extends GenericDAO<FeedEntryStatus> {
 
         if (newerThan != null) {
             query.where(ENTRY.inserted.goe(newerThan));
+        }
+
+        if (publishedAfter != null) {
+            query.where(ENTRY.published.goe(publishedAfter));
         }
 
         setTimeout(query, config.database().queryTimeout());

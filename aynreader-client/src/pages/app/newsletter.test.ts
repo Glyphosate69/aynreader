@@ -112,7 +112,7 @@ describe("newsletter", () => {
     it("uses the selected period start", () => {
         const now = new Date("2026-08-26T14:30:00Z")
 
-        expect(getNewsletterStartDate("today", undefined, now)).toBe(new Date("2026-08-26T00:00:00Z").getTime())
+        expect(getNewsletterStartDate("today", undefined, now)).toBe(new Date("2026-08-25T14:30:00Z").getTime())
         expect(getNewsletterStartDate("week", undefined, now)).toBe(new Date("2026-08-19T00:00:00Z").getTime())
         expect(getNewsletterStartDate("month", undefined, now)).toBe(new Date("2026-07-27T00:00:00Z").getTime())
         expect(getNewsletterStartDate("custom", "2026-08-01", now)).toBe(new Date("2026-08-01T00:00:00Z").getTime())

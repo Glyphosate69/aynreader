@@ -260,6 +260,25 @@ class CategoryIT extends BaseIT {
         }
 
         @Test
+        void publishedAfter() {
+            subscribeAndWaitForEntries(getFeedUrl());
+
+            var response =
+                    RestAssured.given()
+                            .queryParam("id", CategoryREST.ALL)
+                            .queryParam("readType", "all")
+                            .queryParam("publishedAfter", System.currentTimeMillis() - 86_400_000)
+                            .queryParam("includeTotal", true)
+                            .get("rest/category/entries")
+                            .then()
+                            .statusCode(HttpStatus.SC_OK)
+                            .extract();
+
+            Assertions.assertTrue(response.as(Entries.class).getEntries().isEmpty());
+            Assertions.assertEquals(0, ((Number) response.path("total")).intValue());
+        }
+
+        @Test
         void allAsFeed() throws FeedException {
             subscribeAndWaitForEntries(getFeedUrl());
             String xml =

@@ -116,6 +116,9 @@ public class CategoryREST {
                     ReadingMode readType,
             @Parameter(description = "only entries newer than this") @QueryParam("newerThan")
                     Long newerThan,
+            @Parameter(description = "only entries published on or after this timestamp")
+                    @QueryParam("publishedAfter")
+                    Long publishedAfter,
             @Parameter(description = "offset for paging") @DefaultValue("0") @QueryParam("offset")
                     int offset,
             @Parameter(description = "limit for paging, default 20, maximum 1000")
@@ -159,6 +162,8 @@ public class CategoryREST {
         }
 
         Instant newerThanDate = newerThan == null ? null : Instant.ofEpochMilli(newerThan);
+        Instant publishedAfterDate =
+                publishedAfter == null ? null : Instant.ofEpochMilli(publishedAfter);
 
         List<Long> excludedIds = null;
         if (StringUtils.isNotEmpty(excludedSubscriptionIds)) {
@@ -185,6 +190,7 @@ public class CategoryREST {
                             unreadOnly,
                             entryKeywords,
                             newerThanDate,
+                            publishedAfterDate,
                             offset,
                             limit + 1,
                             order,
@@ -201,7 +207,14 @@ public class CategoryREST {
             entries.setName("Starred");
             List<FeedEntryStatus> starred =
                     feedEntryStatusDAO.findStarred(
-                            user, entryKeywords, newerThanDate, offset, limit + 1, order, true);
+                            user,
+                            entryKeywords,
+                            newerThanDate,
+                            publishedAfterDate,
+                            offset,
+                            limit + 1,
+                            order,
+                            true);
             for (FeedEntryStatus status : starred) {
                 entries.getEntries().add(Entry.build(status, config.imageProxyEnabled()));
             }
@@ -220,6 +233,7 @@ public class CategoryREST {
                                 unreadOnly,
                                 entryKeywords,
                                 newerThanDate,
+                                publishedAfterDate,
                                 offset,
                                 limit + 1,
                                 order,
@@ -242,13 +256,15 @@ public class CategoryREST {
         if (includeTotal) {
             long total =
                     STARRED.equals(id)
-                            ? feedEntryStatusDAO.countStarred(user, entryKeywords, newerThanDate)
+                            ? feedEntryStatusDAO.countStarred(
+                                    user, entryKeywords, newerThanDate, publishedAfterDate)
                             : feedEntryStatusDAO.countBySubscriptions(
                                     user,
                                     matchedSubscriptions,
                                     unreadOnly,
                                     entryKeywords,
                                     newerThanDate,
+                                    publishedAfterDate,
                                     tag);
             entries.setTotal(total);
         }
@@ -281,6 +297,9 @@ public class CategoryREST {
                     ReadingMode readType,
             @Parameter(description = "only entries newer than this") @QueryParam("newerThan")
                     Long newerThan,
+            @Parameter(description = "only entries published on or after this timestamp")
+                    @QueryParam("publishedAfter")
+                    Long publishedAfter,
             @Parameter(description = "offset for paging") @DefaultValue("0") @QueryParam("offset")
                     int offset,
             @Parameter(description = "limit for paging, default 20, maximum 1000")
@@ -308,6 +327,7 @@ public class CategoryREST {
                         id,
                         readType,
                         newerThan,
+                        publishedAfter,
                         offset,
                         limit,
                         order,

@@ -144,7 +144,7 @@ export function NewsletterPage() {
             .getEntries({
                 id: Constants.categories.all.id,
                 readType: "all",
-                newerThan: getNewsletterStartDate(appliedScope.period, appliedScope.customStartDate),
+                publishedAfter: getNewsletterStartDate(appliedScope.period, appliedScope.customStartDate),
                 order: "desc",
                 offset: page * PAGE_SIZE,
                 limit: PAGE_SIZE,
@@ -302,7 +302,7 @@ export function NewsletterPage() {
                 const response = await client.category.getEntries({
                     id: Constants.categories.all.id,
                     readType: "all",
-                    newerThan: getNewsletterStartDate(appliedScope.period, appliedScope.customStartDate),
+                    publishedAfter: getNewsletterStartDate(appliedScope.period, appliedScope.customStartDate),
                     order: "desc",
                     offset,
                     limit: Math.min(BULK_SELECTION_PAGE_SIZE, totalEntries - offset),
@@ -361,7 +361,7 @@ export function NewsletterPage() {
                                 value={period}
                                 onChange={value => setPeriod(value as NewsletterPeriod)}
                                 data={[
-                                    { value: "today", label: "Aujourd'hui" },
+                                    { value: "today", label: "Dernières 24 h" },
                                     { value: "week", label: "7 jours" },
                                     { value: "month", label: "30 jours" },
                                     { value: "custom", label: "Depuis le…" },
