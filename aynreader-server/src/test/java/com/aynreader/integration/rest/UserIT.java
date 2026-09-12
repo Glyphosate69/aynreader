@@ -56,7 +56,7 @@ class UserIT extends BaseIT {
         Assertions.assertEquals(1, mails.size());
 
         MailMessage message = mails.getFirst();
-        Assertions.assertEquals("AynReader - Password recovery", message.getSubject());
+        Assertions.assertEquals("Ayn Reader OS - Password recovery", message.getSubject());
         Assertions.assertTrue(
                 message.getHtml()
                         .startsWith("You asked for password recovery for account 'admin'"));

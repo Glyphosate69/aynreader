@@ -289,7 +289,8 @@ class FeedIT extends BaseIT {
                             .statusCode(HttpStatus.SC_OK)
                             .extract()
                             .asString();
-            Assertions.assertTrue(opml.contains("<title>admin subscriptions in AynReader</title>"));
+            Assertions.assertTrue(
+                    opml.contains("<title>admin subscriptions in Ayn Reader OS</title>"));
         }
 
         void importOpml() {

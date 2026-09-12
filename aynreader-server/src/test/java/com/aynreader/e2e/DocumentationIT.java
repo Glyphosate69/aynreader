@@ -18,6 +18,6 @@ class DocumentationIT {
     void documentationAvailable() {
         Page page = context.newPage();
         page.navigate("http://localhost:8085/api-documentation");
-        PlaywrightAssertions.assertThat(page.getByText("AynReader API 1.0.0 OAS")).isVisible();
+        PlaywrightAssertions.assertThat(page.getByText("Ayn Reader OS API 1.0.0 OAS")).isVisible();
     }
 }
