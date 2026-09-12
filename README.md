@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="./actions/workflows/ci.yml">Verification continue</a>
+  <a href="https://github.com/Glyphosate69/aynreader/actions/workflows/ci.yml">Verification continue</a>
   &nbsp;&middot;&nbsp;
   <a href="#demarrage-rapide">Demarrage rapide</a>
   &nbsp;&middot;&nbsp;
@@ -48,7 +48,7 @@ Pour lancer AynReader depuis le code source, installez :
 ### 2. Recuperer le projet
 
 ```bash
-git clone https://github.com/<organisation-ou-compte>/aynreader.git
+git clone https://github.com/Glyphosate69/aynreader.git
 cd aynreader
 ```
 
